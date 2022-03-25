@@ -8,11 +8,9 @@ Robopilot is minimalist and modular autonomous computer vision library for Pytho
 
 ## Use Robopilot if you want to
 
-* Make a robot pilot its self.
-* Experiment with autopilots, mapping computer vision and neural networks.
+* Experiment with point clouds, mapping computer vision and neural networks.
 * Log sensor data. (images, user inputs, sensor readings)
-* Control your robot via a web or game controller.
-* Leverage distributed driving data.
+* Leverage distributed visiion data.
 * Capturing an object’s 3D structure from multiple viewpoints simultaneously,
 * Capturing a “panoramic” 3D structure of a scene (extending the field of view of one sensor by using many)
 * Streaming the reconstructed point cloud to a remote location,
