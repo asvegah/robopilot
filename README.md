@@ -1,5 +1,6 @@
 # Robopilot
 
+![robopilot](https://user-images.githubusercontent.com/37585803/160148736-538a405f-c7e7-4ad2-bbc2-75aedd193f35.svg)
 
 >Robotic systems for an unstructured world — Live Dense 3D Mapping — A system designed for real time 3D dense reconstruction using multiple depth sensors simultaneously at real time speed — A Generic Framework for Distributed Deep Neural Networks over the Cloud, the Edge, and End Devices for Computer Vision Applications.
 
