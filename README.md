@@ -2,9 +2,9 @@
 
 ![robopilot](https://user-images.githubusercontent.com/37585803/160148736-538a405f-c7e7-4ad2-bbc2-75aedd193f35.svg)
 
->Robotic systems for an unstructured world — Live Dense 3D Mapping — A system designed for real time 3D dense reconstruction using multiple depth sensors simultaneously at real time speed — A Generic Framework for Distributed Deep Neural Networks over the Cloud, the Edge, and End Devices for Computer Vision Applications.
+>Robotic systems for an unstructured world — Live Dense 3D Mapping — A system designed for real time 3D dense reconstruction using multiple depth sensors simultaneously at real time speed — A Generic Framework for Distributed Deep Neural Networks over the Cloud, the Edge, and End Devices for Computer Vision Applications. For more information, please read this [paper.](https://github.dev/asvegah/robopilot/blob/5a33af5bfcf5f8070e4ac6dab938a2e9837e36a5/docs/Previous%20Experience%20-%20A%20Distributed%20Computing%20Hierarchy.pdf)
 
-Robopilot is minimalist and modular autonomous computer vision library for Python. It is developed with a focus on allowing fast experimentation with Distributed Deep Neural Networks. It is based on existing opensource work, associated machine vision, communications and motor-control libraries and the CUDA and Tensor Flow deep-learning framework. For more, please read this [paper.](https://github.dev/asvegah/robopilot/blob/5a33af5bfcf5f8070e4ac6dab938a2e9837e36a5/docs/Previous%20Experience%20-%20A%20Distributed%20Computing%20Hierarchy.pdf)
+Robopilot is minimalist and modular autonomous computer vision library for Python. It is developed with a focus on allowing fast experimentation with Distributed Deep Neural Networks. It is based on existing opensource work, associated machine vision, communications and motor-control libraries and the CUDA and Tensor Flow deep-learning framework. 
 
 ## Use Robopilot if you want to
 
