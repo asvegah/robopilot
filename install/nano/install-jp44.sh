@@ -9,7 +9,7 @@ sudo -v
 while true; do sudo -n true; sleep 120; kill -0 "$$" || exit; done 2>/dev/null &
 
 ########################################
-# Install DonkeyCar
+# Install Robopilot
 ########################################
 sudo apt-get update -y
 sudo apt-get upgrade -y
@@ -48,7 +48,7 @@ echo "source ~/.virtualenv/robopilot/bin/activate" >> ~/.bashrc
 . ~/.virtualenv/robopilot/bin/activate
 
 
-# Install DonkeyCar as user package
+# Install Robopilot as user package
 cd ~/projects
 git clone https://github.com/autorope/robopilot
 cd robopilot
