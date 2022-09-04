@@ -1,14 +1,16 @@
 """
-Author: Ed Murphy
+Author: Ahmad Vegah
 File: realsense435i.py
-Date: April 14 2019
+Date: 04 September 2022
 Notes: Robopilot part for the Intel Realsense depth cameras D435 and D435i.
 """
+import argparse
 import time
 import logging
+import sys
 
 import numpy as np
-import pyrealsense2 as rs
+import pyrealsense2.pyrealsense2 as rs
 
 #
 # NOTE: Jetson Nano users should clone the Jetson Hacks project
@@ -76,7 +78,9 @@ class RealSense435i(object):
                 config.enable_device(self.device_id)
 
             if self.enable_depth:
-                config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)  # depth
+                config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 6)  # depth
+                #config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 6)  # depth
+                #config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)  # depth
 
             if self.enable_rgb:
                 config.enable_stream(rs.stream.color, 424, 240, rs.format.rgb8, 60)  # rgb
@@ -221,14 +225,28 @@ class RealSense435i(object):
 #
 if __name__ == "__main__":
 
-    show_opencv_window = False # True to show images in opencv window: note that default robopilot environment is not configured for this.
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--rgb", default=False, action='store_true', help="Stream RGB camera")
+    parser.add_argument("--depth", default=False, action='store_true', help="Stream depth camera")
+    parser.add_argument("--imu", default=False, action='store_true', help="Stream IMU to console")
+    parser.add_argument("--device_id", help="Camera id (if more than one camera connected)")
+    args = parser.parse_args()
+
+    if not (args.rgb or args.depth or args.imu):
+        print("Must specify one or more of --rgb, --depth, --imu")
+        parser.print_help()
+        sys.exit(0)
+
+
+    show_opencv_window = args.rgb or args.depth # True to show images in opencv window: note that default robopilot environment is not configured for this.
     if show_opencv_window:
         import cv2
 
-    enable_rgb = True
-    enable_depth = True
-    enable_imu = True
-    device_id = None
+    enable_rgb = args.rgb
+    enable_depth = args.depth
+    enable_imu = args.imu
+    device_id = args.device_id
 
     width = 212
     height = 120
