@@ -79,11 +79,10 @@ class RealSense435i(object):
 
             if self.enable_depth:
                 config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 6)  # depth
-                #config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 6)  # depth
                 #config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)  # depth
 
             if self.enable_rgb:
-                config.enable_stream(rs.stream.color, 424, 240, rs.format.rgb8, 60)  # rgb
+                config.enable_stream(rs.stream.color, 424, 240, rs.format.rgb8, 30)  # rgb
 
             # Start streaming
             profile = self.pipeline.start(config)
