@@ -29,6 +29,7 @@ import pyrealsense2.pyrealsense2 as rs
 WIDTH = 424
 HEIGHT = 240
 CHANNELS = 3
+ROTATE = True
 
 class RealSense435i(object):
     """
@@ -51,6 +52,7 @@ class RealSense435i(object):
         self.height = height
         self.channels = channels
         self.resize = (width != WIDTH) or (height != height) or (channels != CHANNELS)
+        self.rotate = ROTATE
         if self.resize:
             print("The output images will be resized from {} to {}.  This requires opencv.".format((WIDTH, HEIGHT, CHANNELS), (self.width, self.height, self.channels)))
 
@@ -166,6 +168,12 @@ class RealSense435i(object):
                     self.depth_image = cv2.resize(self.depth_image, (self.width, self.height), cv2.INTER_NEAREST) if self.enable_depth else None
                 if self.channels != CHANNELS:
                     self.color_image = cv2.cvtColor(self.color_image, cv2.COLOR_RGB2GRAY) if self.enable_rgb else None
+
+            if self.rotate:
+                import cv2
+                self.color_image = cv2.rotate(self.color_image, cv2.ROTATE_180)
+                self.depth_image = cv2.rotate(self.depth_image, cv2.ROTATE_180)
+
 
         #
         # output imu data as discrete values in the same order as the Mpu6050 code
