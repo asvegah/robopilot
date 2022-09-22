@@ -784,7 +784,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--rate", type=float, default=20,
                         help = "Number of scans per second")
-    parser.add_argument("-n", "--number", type=int, default=40,
+    parser.add_argument("-n", "--number", type=int, default=100,
                         help = "Number of scans to collect")
     parser.add_argument("-a", "--min-angle", type=float, default=0,
                         help="Minimum angle in degress (inclusive) to save")
