@@ -2,7 +2,7 @@
 
 ![robopilot](https://user-images.githubusercontent.com/37585803/160148736-538a405f-c7e7-4ad2-bbc2-75aedd193f35.svg)
 
->Robotic systems for an unstructured world — Live Dense Multi Modal 3D Mapping — A system designed for real time 3D reconstruction using a fusion of multiple depth and camera sensors simultaneously at real time speed — A Generic Framework for Distributed Deep Neural Networks over the Cloud, the Edge, and End Devices for Computer Vision Applications.
+>Robotic systems for an unstructured world — Live Dense Multi Modal 3D Mapping — A system designed for real time 3D reconstruction using a fusion of multiple depth and camera sensors simultaneously at real time speed.
 
 Robopilot is minimalist and modular autonomous computer vision library for Python. It is developed with a focus on allowing fast experimentation with Distributed Deep Neural Networks. It is based on existing opensource work, associated machine vision, communications and motor-control libraries and the CUDA and Tensor Flow deep-learning framework. 
 
@@ -21,9 +21,7 @@ Robopilot is minimalist and modular autonomous computer vision library for Pytho
 * Nvidia TX1 (x2)
 * RedCat Crawler 1/5 (x1)
 * Xbox Kinect for PC (x2)
-* Raspberry Pi Cluster (x19)
 * Intel RTF Drone (x1)
-* Intel Neural Compute Stick (x5)
 
 ### Get Piloting
 
