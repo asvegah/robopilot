@@ -1,5 +1,5 @@
 """
-Scripts to drive a robopilot device remotely
+Scripts to drive a robopilot car remotely
 
 Usage:
     remote_cam_view.py --name=<robot_name> --broker="localhost" [--record=<path>]

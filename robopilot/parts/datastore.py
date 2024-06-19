@@ -16,7 +16,6 @@ import sys
 import time
 
 import numpy as np
-import pandas as pd
 from PIL import Image
 
 
@@ -29,7 +28,7 @@ class Tub(object):
     For example:
 
     #Create a tub to store speed values.
-    >>> path = '~/myrobopilot/test_tub'
+    >>> path = '~/mydonkey/test_tub'
     >>> inputs = ['user/speed', 'cam/image']
     >>> types = ['float', 'image']
     >>> t=Tub(path=path, inputs=inputs, types=types)
@@ -100,7 +99,9 @@ class Tub(object):
         return max(index)
 
     def update_df(self):
-        df = pd.DataFrame([self.get_json_record(i) for i in self.get_index(shuffled=False)])
+        import pandas as pd
+        df = pd.DataFrame([self.get_json_record(i)
+                           for i in self.get_index(shuffled=False)])
         self.df = df
 
     def get_df(self):
@@ -218,7 +219,7 @@ class Tub(object):
             elif typ in ['str', 'float', 'int', 'boolean', 'vector']:
                 json_data[key] = val
 
-            elif typ is 'image':
+            elif typ == 'image':
                 path = self.make_file_path(key)
                 val.save(path)
                 json_data[key]=path
@@ -344,7 +345,6 @@ class Tub(object):
         except:
             pass
 
-
     def write_exclude(self):
         if 0 == len(self.exclude):
             # If the exclude set is empty don't leave an empty file around.
@@ -353,7 +353,6 @@ class Tub(object):
         else:
             with open(self.exclude_path, 'w') as f:
                 json.dump(list(self.exclude), f)
-
 
 
 class TubWriter(Tub):
@@ -535,6 +534,8 @@ class TubTimeStacker(TubImageStacker):
 
 class TubGroup(Tub):
     def __init__(self, tub_paths):
+        import pandas as pd
+
         tub_paths = self.resolve_tub_paths(tub_paths)
         print('TubGroup:tubpaths:', tub_paths)
         tubs = [Tub(path) for path in tub_paths]

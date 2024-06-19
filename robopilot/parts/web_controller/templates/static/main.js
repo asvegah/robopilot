@@ -1,26 +1,34 @@
 var driveHandler = new function() {
     //functions used to drive the vehicle. 
 
-    var state = {'tele': {
-                          "user": {
-                                  'angle': 0,
-                                  'throttle': 0,
-                                  },
-                          "pilot": {
-                                  'angle': 0,
-                                  'throttle': 0,
-                                  }
-                          },
-                  'brakeOn': true,
-                  'recording': false,
-                  'driveMode': "user",
-                  'pilot': 'None',
-                  'session': 'None',
-                  'lag': 0,
-                  'controlMode': 'joystick',
-                  'maxThrottle' : 1,
-                  'throttleMode' : 'user',
-                  }
+    var state = {
+        'tele': {
+            "user": {
+                'angle': 0,
+                'throttle': 0,
+            },
+            "pilot": {
+                'angle': 0,
+                'throttle': 0,
+            }
+        },
+        'brakeOn': true,
+        'recording': false,
+        'driveMode': "user",
+        'pilot': 'None',
+        'session': 'None',
+        'lag': 0,
+        'controlMode': 'joystick',
+        'maxThrottle' : 1,
+        'throttleMode' : 'user',
+        'buttons': {
+            "w1": false,  // boolean; true is 'down' or pushed, false is 'up' or not pushed
+            "w2": false,
+            "w3": false,
+            "w4": false,
+            "w5": false,
+        }
+    }
 
     var joystick_options = {}
     var joystickLoopRunning=false;
@@ -37,22 +45,22 @@ var driveHandler = new function() {
     this.load = function() {
       driveURL = '/drive'
       socket = new WebSocket('ws://' + location.host + '/wsDrive');
-      
-      socket.onmessage = function (event) {
-          console.log(event.data);
-      };
 
       setBindings()
 
+      joystick_element = document.getElementById('joystick_container');
       joystick_options = {
-        zone: document.getElementById('joystick_container'),  // active zone
+        zone: joystick_element,  // active zone
+        mode: 'dynamic',
+        size: 200,
         color: '#668AED',
-        size: 350,
+        dynamicPage: true,
+        follow: true,
       };
 
       var manager = nipplejs.create(joystick_options);
       bindNipple(manager)
-      
+
       if(!!navigator.getGamepads){
         console.log("Device has gamepad support.")
         hasGamepad = true;
@@ -69,8 +77,49 @@ var driveHandler = new function() {
       }
     };
 
+    //
+    // Update a state object with the given data.
+    // This will only update existing fields in 
+    // the state; it will not add new fields that
+    // may exist in the data but not the state.
+    //
+    var updateState = function(state, data) {
+        let changed = false;
+        if(typeof data === 'object') {
+            const keys = Object.keys(data)
+            keys.forEach(key => {
+                //
+                // state must already have the key;
+                // we are not adding new fields to the state,
+                // we are only updating existing fields.
+                //
+                if(state.hasOwnProperty(key) && state[key] !== data[key]) {
+                    if(typeof state[key] === 'object') {
+                        // recursively update the state's object field
+                        changed = updateState(state[key], data[key]) && changed;
+                    } else {
+                        state[key] = data[key];
+                        changed = true;
+                    }
+                }
+            });
+        }
+        return changed;
+    }
 
     var setBindings = function() {
+      //
+      // when server sends a message with state changes
+      // then update our local state and 
+      // if there were any changes then redraw the UI.
+      //
+      socket.onmessage = function (event) {
+        console.log(event.data);
+        const data = JSON.parse(event.data);
+        if(updateState(state, data)) {
+            updateUI();
+        }
+      };
 
       $(document).keydown(function(e) {
           if(e.which == 32) { toggleBrake() }  // 'space'  brake
@@ -79,9 +128,10 @@ var driveHandler = new function() {
           if(e.which == 75) { throttleDown() } // 'k'  slow down
           if(e.which == 74) { angleLeft() } // 'j' turn left
           if(e.which == 76) { angleRight() } // 'l' turn right
-          if(e.which == 65) { updateDriveMode('auto') } // 'a' turn on auto mode
-          if(e.which == 68) { updateDriveMode('user') } // 'd' turn on manual mode
-          if(e.which == 83) { updateDriveMode('auto_angle') } // 'a' turn on auto mode
+          if(e.which == 65) { updateDriveMode('local') } // 'a' turn on local mode (full _A_uto)
+          if(e.which == 85) { updateDriveMode('user') } // 'u' turn on manual mode (_U_user)
+          if(e.which == 83) { updateDriveMode('local_angle') } // 's' turn on local mode (auto _S_teering)
+          if(e.which == 77) { toggleDriveMode() } // 'm' toggle drive mode (_M_ode)
       });
 
       $('#mode_select').on('change', function () {
@@ -110,12 +160,16 @@ var driveHandler = new function() {
           joystickLoopRunning = true;
           console.log('joystick mode');
           joystickLoop();
-        } else if (this.value == 'tilt' && deviceHasOrientation) {
+        } else {
           joystickLoopRunning = false;
+        }
+
+        if (deviceHasOrientation && this.value == 'tilt') {
           state.controlMode = "tilt";
           console.log('tilt mode')
-        } else if (this.value == 'gamepad' && hasGamepad) {
-          joystickLoopRunning = false;
+        }
+
+        if (hasGamepad && this.value == 'gamepad') {
           state.controlMode = "gamepad";
           console.log('gamepad mode')
           gamePadLoop();
@@ -123,6 +177,17 @@ var driveHandler = new function() {
         updateUI();
       });
 
+      // programmable buttons
+      $('#button_bar > button').mousedown(function() {
+        console.log(`${$(this).attr('id')} mousedown`);
+        state.buttons[$(this).attr('id')] = true;
+        postDrive(["buttons"]); // write it back to the server
+      });
+      $('#button_bar > button').mouseup(function() {
+        console.log(`${$(this).attr('id')} mouseup`);
+        state.buttons[$(this).attr('id')] = false;
+        postDrive(["buttons"]); // write it back to the server
+      });
     };
 
 
@@ -234,33 +299,55 @@ var driveHandler = new function() {
       }
 
       if (state.controlMode == "joystick") {
-        $('#joystick-column').show();
-        $('#tilt-toggle').removeClass("active");
+        $('#joystick_outer').show();
         $('#joystick-toggle').addClass("active");
         $('#joystick').attr("checked", "checked")
-        $('#tilt').removeAttr("checked")
-      } else if (state.controlMode == "tilt") {
-        $('#joystick-column').hide();
+      } else {
+        $('#joystick_outer').hide();
         $('#joystick-toggle').removeClass("active");
-        $('#tilt-toggle').addClass("active");
         $('#joystick').removeAttr("checked");
+      }
+
+      if (state.controlMode == "tilt") {
+        $('#tilt-toggle').addClass("active");
         $('#tilt').attr("checked", "checked");
+      } else {
+        $('#tilt-toggle').removeClass("active");
+        $('#tilt').removeAttr("checked")
       }
 
       //drawLine(state.tele.user.angle, state.tele.user.throttle)
     };
 
-    var postDrive = function() {
+    const ALL_POST_FIELDS = ['angle', 'throttle', 'drive_mode', 'recording', 'buttons'];
 
-        //Send angle and throttle values
-        data = JSON.stringify({ 'angle': state.tele.user.angle,
-                                'throttle':state.tele.user.throttle,
-                                'drive_mode':state.driveMode,
-                                'recording': state.recording})
-        console.log(data)
-        // $.post(driveURL, data)
-        socket.send(data)
-        updateUI()
+    //
+    // Set any changed properties to the server
+    // via the websocket connection
+    //
+    var postDrive = function(fields=[]) {
+
+        if(fields.length === 0) {
+            fields = ALL_POST_FIELDS;
+        }
+
+        let data = {}
+        fields.forEach(field => {
+            switch (field) {
+                case 'angle': data['angle'] = state.tele.user.angle; break;
+                case 'throttle': data['throttle'] = state.tele.user.throttle; break;
+                case 'drive_mode': data['drive_mode'] = state.driveMode; break;
+                case 'recording': data['recording'] = state.recording; break;
+                case 'buttons': data['buttons'] = state.buttons; break;
+                default: console.log(`Unexpected post field: '${field}'`); break;
+            }
+        });
+        if(data) {
+            let json_data = JSON.stringify(data);
+            console.log(`Posting ${json_data}`);
+            socket.send(json_data)
+            updateUI()
+        }
     };
 
     var applyDeadzone = function(number, threshold){
@@ -405,18 +492,34 @@ var driveHandler = new function() {
 
     var updateDriveMode = function(mode){
       state.driveMode = mode;
-      postDrive()
+      postDrive(["drive_mode"])
     };
+
+    var toggleDriveMode = function() {
+      switch(state.driveMode) {
+        case "user": {
+            updateDriveMode("local_angle");
+            break;
+        }
+        case "local_angle": {
+            updateDriveMode("local");
+            break;
+        }
+        default: {
+            updateDriveMode("user");
+            break;
+        }
+      }
+    }
 
     var toggleRecording = function(){
       state.recording = !state.recording
-      postDrive()
+      postDrive(['recording']);
     };
 
     var toggleBrake = function(){
       state.brakeOn = !state.brakeOn;
       initialGamma = null;
-      
 
       if (state.brakeOn) {
         brake();
@@ -430,7 +533,6 @@ var driveHandler = new function() {
           state.recording = false
           state.driveMode = 'user';
           postDrive()
-
 
       i++
       if (i < 5) {

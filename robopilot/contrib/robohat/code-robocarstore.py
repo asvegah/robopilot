@@ -1,4 +1,4 @@
-# Robopilot Driver for Robotics Masters Robo HAT MM1
+# Robopilot Car Driver for Robotics Masters Robo HAT MM1
 #
 # Notes:
 #   This is to be run using CircuitPython 5.0

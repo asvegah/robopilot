@@ -10,10 +10,10 @@ import time
 from robopilot.parts.network import MQTTValueSub, MQTTValuePub
 from robopilot.parts.image import JpgToImgArr
 
-class RobopilotRemoteContoller:
-    def __init__(self, robopilot_name, mqtt_broker, sensor_size=(120, 160, 3)):
-        self.camera_sub = MQTTValueSub("robopilot/%s/camera" % robopilot_name, broker=mqtt_broker)
-        self.controller_pub = MQTTValuePub("robopilot/%s/controls" % robopilot_name, broker=mqtt_broker)
+class DonkeyRemoteContoller:
+    def __init__(self, donkey_name, mqtt_broker, sensor_size=(120, 160, 3)):
+        self.camera_sub = MQTTValueSub("robopilot/%s/camera" % donkey_name, broker=mqtt_broker)
+        self.controller_pub = MQTTValuePub("robopilot/%s/controls" % donkey_name, broker=mqtt_broker)
         self.jpgToImg = JpgToImgArr()
         self.sensor_size = sensor_size
 

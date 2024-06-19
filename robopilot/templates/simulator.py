@@ -44,9 +44,9 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
     to parts requesting the same named input.
     '''
 
-    if cfg.ROBOPILOT_GYM:
+    if cfg.DONKEY_GYM:
         #the simulator will use cuda and then we usually run out of resources
-        #if we also try to use cuda. so disable for robopilot_gym.
+        #if we also try to use cuda. so disable for donkey_gym.
         os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
     if model_type is None:
@@ -60,11 +60,11 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
     #Initialize car
     V = dk.vehicle.Vehicle()
 
-    from robopilot.parts.dgym import RobopilotGymEnv
+    from robopilot.parts.dgym import DonkeyGymEnv
 
     inputs = []
 
-    cam = RobopilotGymEnv(cfg.ROBOPILOT_SIM_PATH, host=cfg.SIM_HOST, env_name=cfg.ROBOPILOT_GYM_ENV_NAME, conf=cfg.GYM_CONF, delay=cfg.SIM_ARTIFICIAL_LATENCY)
+    cam = DonkeyGymEnv(cfg.DONKEY_SIM_PATH, host=cfg.SIM_HOST, env_name=cfg.DONKEY_GYM_ENV_NAME, conf=cfg.GYM_CONF, delay=cfg.SIM_ARTIFICIAL_LATENCY)
     threaded = True
     inputs = ['angle', 'throttle', 'brake']
 
@@ -166,7 +166,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
                 return 0.1
             return 0
 
-    if cfg.HAVE_RGB_LED and not cfg.ROBOPILOT_GYM:
+    if cfg.HAVE_RGB_LED and not cfg.DONKEY_GYM:
         from robopilot.parts.led_status import RGB_LED
         led = RGB_LED(cfg.LED_PIN_R, cfg.LED_PIN_G, cfg.LED_PIN_B, cfg.LED_INVERT)
         led.set_rgb(cfg.LED_R, cfg.LED_G, cfg.LED_B)
@@ -273,7 +273,8 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
 
         model_reload_cb = None
 
-        if '.h5' in model_path or '.uff' in model_path or 'tflite' in model_path or '.pkl' in model_path:
+        if '.h5' in model_path or '.savedmodel' in model_path or '.uff' in \
+                model_path or 'tflite' in model_path or '.pkl' in model_path:
             #when we have a .h5 extension
             #load everything from the model file
             load_model(kl, model_path)
@@ -409,7 +410,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None, camera_type
         V.add(pub, inputs=['jpg/bin'])
 
     if type(ctr) is LocalWebController:
-        if cfg.ROBOPILOT_GYM:
+        if cfg.DONKEY_GYM:
             print("You can now go to http://localhost:%d to drive your car." % cfg.WEB_CONTROL_PORT)
         else:
             print("You can now go to <your hostname.local>:%d to drive your car." % cfg.WEB_CONTROL_PORT)

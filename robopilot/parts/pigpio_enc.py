@@ -1,6 +1,13 @@
+from robopilot.utilities.deprecated import deprecated
 import pigpio
 import time
 
+#
+# contents of this file are deprecated
+# in favor of robopilot.parts.tachometer and robopilot.parts.odometer
+#
+
+@deprecated("Deprecated in favor of robopilot.parts.odometer.Odometer")
 class OdomDist(object):
     """
     Take a tick input from odometry and compute the distance travelled
@@ -51,6 +58,7 @@ class OdomDist(object):
         return self.meters, self.meters_per_second, distance
 
 
+@deprecated("Deprecated in favor of robopilot.parts.tachometer.GpioTachometer")
 class PiPGIOEncoder():
     def __init__(self, pin, pi):
         self.pin = pin

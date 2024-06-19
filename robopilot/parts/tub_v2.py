@@ -6,8 +6,12 @@ import json
 
 import numpy as np
 from PIL import Image
+import logging
 
 from robopilot.parts.datastore_v2 import Manifest, ManifestIterator
+
+
+logger = logging.getLogger(__name__)
 
 
 class Tub(object):
@@ -63,12 +67,18 @@ class Tub(object):
                     image_path = os.path.join(self.images_base_path, name)
                     image.save(image_path)
                     contents[key] = name
+                elif input_type == 'gray16_array':
+                    # save np.uint16 as a 16bit png
+                    image = Image.fromarray(np.uint16(value))
+                    name = Tub._image_file_name(self.manifest.current_index, key, ext='.png')
+                    image_path = os.path.join(self.images_base_path, name)
+                    image.save(image_path)
+                    contents[key]=name
 
         # Private properties
         contents['_timestamp_ms'] = int(round(time.time() * 1000))
         contents['_index'] = self.manifest.current_index
-        contents['_session_id'] = self.manifest.session_id
-
+        contents['_session_id'] = self.manifest.session_id[1]
         self.manifest.write_record(contents)
 
     def delete_records(self, record_indexes):
@@ -85,6 +95,7 @@ class Tub(object):
         self.manifest.restore_records(record_indexes)
 
     def close(self):
+        logger.info(f'Closing tub {self.base_path}')
         self.manifest.close()
 
     def __iter__(self):

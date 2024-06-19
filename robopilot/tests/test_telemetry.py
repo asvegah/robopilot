@@ -3,30 +3,28 @@
 import time
 from unittest import mock
 from paho.mqtt.client import Client
+from paho.mqtt.enums import CallbackAPIVersion
+
 import robopilot.templates.cfg_complete as cfg
 from robopilot.parts.telemetry import MqttTelemetry
-import pytest
 from random import randint
 
 
 def test_mqtt_telemetry():
 
     cfg.TELEMETRY_DEFAULT_INPUTS = 'pilot/angle,pilot/throttle'
-    cfg.TELEMETRY_ROBOPILOT_NAME = 'test{}'.format(randint(0, 1000))
+    cfg.TELEMETRY_DONKEY_NAME = 'test{}'.format(randint(0, 1000))
     cfg.TELEMETRY_MQTT_JSON_ENABLE = True
 
     # Create receiver
-    sub = Client(clean_session=True)
-
-    # def on_message(client, userdata, message):
-    #     data = message.payload
-    #     print(message)
+    sub = Client(callback_api_version=CallbackAPIVersion.VERSION2,
+                 clean_session=True)
 
     on_message_mock = mock.Mock()
     sub.on_message = on_message_mock
     sub.connect(cfg.TELEMETRY_MQTT_BROKER_HOST)
     sub.loop_start()
-    name = "robopilot/%s/#" % cfg.TELEMETRY_ROBOPILOT_NAME
+    name = "robopilot/%s/#" % cfg.TELEMETRY_DONKEY_NAME
     sub.subscribe(name)
 
     t = MqttTelemetry(cfg)

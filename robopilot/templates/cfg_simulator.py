@@ -141,7 +141,7 @@ JOYSTICK_DEVICE_FILE = "/dev/input/js0" # this is the unix file use to access th
 #For the categorical model, this limits the upper bound of the learned throttle
 #it's very IMPORTANT that this value is matched from the training PC config.py and the robot.py
 #and ideally wouldn't change once set.
-MODEL_CATEGORICAL_MAX_THROTTLE_RANGE = 0.5
+MODEL_CATEGORICAL_MAX_THROTTLE_RANGE = 0.8
 
 #RNN or 3D
 SEQUENCE_LENGTH = 3             #some models use a number of images over time. This controls how many.
@@ -225,21 +225,21 @@ TRAIN_LOCALIZER = False
 NUM_LOCATIONS = 10
 BUTTON_PRESS_NEW_TUB = False #when enabled, makes it easier to divide our data into one tub per track length if we make a new tub on each X button press.
 
-#RobopilotGym
+#DonkeyGym
 #Only on Ubuntu linux, you can use the simulator as a virtual robopilot and
 #issue the same python manage.py drive command as usual, but have them control a virtual car.
 #This enables that, and sets the path to the simualator and the environment.
-#You will want to download the simulator binary from: https://github.com/tawnkramer/robopilot_gym/releases/download/v18.9/RobopilotSimLinux.zip
-#then extract that and modify ROBOPILOT_SIM_PATH.
-ROBOPILOT_GYM = True
-ROBOPILOT_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/RobopilotSimLinux/robopilot_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
-ROBOPILOT_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
+#You will want to download the simulator binary from: https://github.com/tawnkramer/donkey_gym/releases/download/v18.9/DonkeySimLinux.zip
+#then extract that and modify DONKEY_SIM_PATH.
+DONKEY_GYM = True
+DONKEY_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/DonkeySimLinux/donkey_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
+DONKEY_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
 GYM_CONF = { "img_h" : IMAGE_H, "img_w" : IMAGE_W, "body_style" : "robopilot", "body_rgb" : (128, 128, 128), "car_name" : "car", "font_size" : 100 } # body style(robopilot|bare|car01) body rgb 0-255
 GYM_CONF["racer_name"] = "Your Name"
 GYM_CONF["country"] = "Place"
 GYM_CONF["bio"] = "I race robots."
 
-SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmyrobopilot.com"
+SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmydonkey.com"
 SIM_ARTIFICIAL_LATENCY = 0          # this is the millisecond latency in controls. Can use useful in emulating the delay when useing a remote server. values of 100 to 400 probably reasonable.
 
 #publish camera over network
@@ -256,7 +256,7 @@ AI_LAUNCH_KEEP_ENABLED = False      # when False ( default) you will need to hit
 AI_THROTTLE_MULT = 1.0              # this multiplier will scale every throttle value for all output from NN models
 
 #Path following
-PATH_FILENAME = "robopilot_path.pkl"   # the path will be saved to this filename
+PATH_FILENAME = "donkey_path.pkl"   # the path will be saved to this filename
 PATH_SCALE = 5.0                    # the path display will be scaled by this factor in the web page
 PATH_OFFSET = (0, 0)                # 255, 255 is the center of the map. This offset controls where the origin is displayed.
 PATH_MIN_DIST = 0.3                 # after travelling this distance (m), save a path point
@@ -264,6 +264,7 @@ PID_P = -10.0                       # proportional mult for PID path follower
 PID_I = 0.000                       # integral mult for PID path follower
 PID_D = -0.2                        # differential mult for PID path follower
 PID_THROTTLE = 0.2                  # constant throttle value during path following
+USE_CONSTANT_THROTTLE = False       # whether or not to use the constant throttle or variable throttle captured during path recording
 SAVE_PATH_BTN = "cross"             # joystick button to save path
 RESET_ORIGIN_BTN = "triangle"       # joystick button to press to move car back to origin
 

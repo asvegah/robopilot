@@ -4,15 +4,13 @@ import shutil
 import socket
 import stat
 import sys
-from socket import *
 import logging
 
 from progress.bar import IncrementalBar
 import robopilot as dk
 from robopilot.management.joystick_creator import CreateJoystick
-from robopilot.management.tub import TubManager
-from robopilot.pipeline.types import TubRecord, TubDataset
-from robopilot.utils import *
+
+from robopilot.utils import normalize_image, load_image, math
 
 PACKAGE_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 TEMPLATES_PATH = os.path.join(PACKAGE_PATH, 'templates')
@@ -28,22 +26,20 @@ def make_dir(path):
     return real_path
 
 
-def load_config(config_path):
-
-    '''
+def load_config(config_path, myconfig='myconfig.py'):
+    """
     load a config from the given path
-    '''
+    """
     conf = os.path.expanduser(config_path)
-
     if not os.path.exists(conf):
-        print("No config file at location: %s. Add --config to specify\
-                location or run from dir containing config.py." % conf)
+        logger.error(f"No config file at location: {conf}. Add --config to "
+                     f"specify location or run from dir containing config.py.")
         return None
 
     try:
-        cfg = dk.load_config(conf)
-    except:
-        print("Exception while loading config from", conf)
+        cfg = dk.load_config(conf, myconfig)
+    except Exception as e:
+        logger.error(f"Exception {e} while loading config from {conf}")
         return None
 
     return cfg
@@ -54,7 +50,7 @@ class BaseCommand(object):
 
 
 class CreateCar(BaseCommand):
-    
+
     def parse_args(self, args):
         parser = argparse.ArgumentParser(prog='createcar', usage='%(prog)s [options]')
         parser.add_argument('--path', default=None, help='path where to create car folder')
@@ -62,11 +58,11 @@ class CreateCar(BaseCommand):
         parser.add_argument('--overwrite', action='store_true', help='should replace existing files')
         parsed_args = parser.parse_args(args)
         return parsed_args
-        
+
     def run(self, args):
         args = self.parse_args(args)
         self.create_car(path=args.path, template=args.template, overwrite=args.overwrite)
-  
+
     def create_car(self, path, template='complete', overwrite=False):
         """
         This script sets up the folder structure for robopilot to work.
@@ -77,15 +73,15 @@ class CreateCar(BaseCommand):
         # these are neeeded incase None is passed as path
         path = path or '~/mycar'
         template = template or 'complete'
-        print("Creating car folder: {}".format(path))
+        print(f"Creating car folder: {path}")
         path = make_dir(path)
-        
+
         print("Creating data & model folders.")
         folders = ['models', 'data', 'logs']
-        folder_paths = [os.path.join(path, f) for f in folders]   
+        folder_paths = [os.path.join(path, f) for f in folders]
         for fp in folder_paths:
             make_dir(fp)
-            
+
         # add car application and config files if they don't exist
         app_template_path = os.path.join(TEMPLATES_PATH, template+'.py')
         config_template_path = os.path.join(TEMPLATES_PATH, 'cfg_' + template + '.py')
@@ -97,11 +93,11 @@ class CreateCar(BaseCommand):
         mycar_config_path = os.path.join(path, 'myconfig.py')
         train_app_path = os.path.join(path, 'train.py')
         calibrate_app_path = os.path.join(path, 'calibrate.py')
-        
+
         if os.path.exists(car_app_path) and not overwrite:
             print('Car app already exists. Delete it and rerun createcar to replace.')
         else:
-            print("Copying car application template: {}".format(template))
+            print(f"Copying car application template: {template}")
             shutil.copyfile(app_template_path, car_app_path)
             os.chmod(car_app_path, stat.S_IRWXU)
 
@@ -136,11 +132,11 @@ class CreateCar(BaseCommand):
             for line in cfg:
                 if "import os" in line:
                     copy = True
-                if copy: 
+                if copy:
                     mcfg.write("# " + line)
             cfg.close()
             mcfg.close()
- 
+
         print("Robopilot setup complete.")
 
 
@@ -154,72 +150,106 @@ class UpdateCar(BaseCommand):
         parser.add_argument('--template', default=None, help='name of car template to use')
         parsed_args = parser.parse_args(args)
         return parsed_args
-        
+
     def run(self, args):
         args = self.parse_args(args)
         cc = CreateCar()
         cc.create_car(path=".", overwrite=True, template=args.template)
-        
+
 
 class FindCar(BaseCommand):
     def parse_args(self, args):
-        pass        
+        pass
 
     def run(self, args):
         print('Looking up your computer IP address...')
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8",80))
-        ip = s.getsockname()[0] 
-        print('Your IP address: %s ' %s.getsockname()[0])
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        print('Your IP address: %s ' % s.getsockname()[0])
         s.close()
-        
+
         print("Finding your car's IP address...")
         cmd = "sudo nmap -sP " + ip + "/24 | awk '/^Nmap/{ip=$NF}/B8:27:EB/{print ip}'"
         cmdRPi4 = "sudo nmap -sP " + ip + "/24 | awk '/^Nmap/{ip=$NF}/DC:A6:32/{print ip}'"
-        print("Your car's ip address is:" )
+        print("Your car's ip address is:")
         os.system(cmd)
         os.system(cmdRPi4)
 
 
-class CalibrateCar(BaseCommand):    
-    
+class CalibrateCar(BaseCommand):
+
     def parse_args(self, args):
         parser = argparse.ArgumentParser(prog='calibrate', usage='%(prog)s [options]')
-        parser.add_argument('--channel', help="The channel you'd like to calibrate [0-15]")
-        parser.add_argument('--address', default='0x40', help="The i2c address you'd like to calibrate [default 0x40]")
-        parser.add_argument('--bus', default=None, help="The i2c bus you'd like to calibrate [default autodetect]")
+        parser.add_argument(
+            '--pwm-pin',
+            help="The PwmPin specifier of pin to calibrate, like 'RPI_GPIO.BOARD.33' or 'PCA9685.1:40.13'")
+        parser.add_argument('--channel', default=None, help="The PCA9685 channel you'd like to calibrate [0-15]")
+        parser.add_argument(
+            '--address',
+            default='0x40',
+            help="The i2c address of PCA9685 you'd like to calibrate [default 0x40]")
+        parser.add_argument(
+            '--bus',
+            default=None,
+            help="The i2c bus of PCA9685 you'd like to calibrate [default autodetect]")
         parser.add_argument('--pwmFreq', default=60, help="The frequency to use for the PWM")
-        parser.add_argument('--arduino', dest='arduino', action='store_true', help='Use arduino pin for PWM (calibrate pin=<channel>)')
+        parser.add_argument(
+            '--arduino',
+            dest='arduino',
+            action='store_true',
+            help='Use arduino pin for PWM (calibrate pin=<channel>)')
         parser.set_defaults(arduino=False)
         parsed_args = parser.parse_args(args)
         return parsed_args
 
     def run(self, args):
         args = self.parse_args(args)
-        channel = int(args.channel)
 
-        if args.arduino == True:
+        if args.arduino:
             from robopilot.parts.actuator import ArduinoFirmata
 
+            channel = int(args.channel)
             arduino_controller = ArduinoFirmata(servo_pin=channel)
-            print('init Arduino PWM on pin %d' %(channel))
+            print('init Arduino PWM on pin %d' % (channel))
             input_prompt = "Enter a PWM setting to test ('q' for quit) (0-180): "
+
+        elif args.pwm_pin is not None:
+            from robopilot.parts.actuator import PulseController
+            from robopilot.parts import pins
+
+            pwm_pin = None
+            try:
+                pwm_pin = pins.pwm_pin_by_id(args.pwm_pin)
+            except ValueError as e:
+                print(e)
+                print("See pins.py for a description of pin specification strings.")
+                exit(-1)
+            print(f'init pin {args.pwm_pin}')
+            freq = int(args.pwmFreq)
+            print(f"Using PWM freq: {freq}")
+            c = PulseController(pwm_pin)
+            input_prompt = "Enter a PWM setting to test ('q' for quit) (0-1500): "
+            print()
+
         else:
             from robopilot.parts.actuator import PCA9685
             from robopilot.parts.sombrero import Sombrero
 
-            s = Sombrero()
+            Sombrero()  # setup pins for Sombrero hat
 
+            channel = int(args.channel)
             busnum = None
             if args.bus:
                 busnum = int(args.bus)
             address = int(args.address, 16)
-            print('init PCA9685 on channel %d address %s bus %s' %(channel, str(hex(address)), str(busnum)))
+            print('init PCA9685 on channel %d address %s bus %s' % (channel, str(hex(address)), str(busnum)))
             freq = int(args.pwmFreq)
-            print("Using PWM freq: {}".format(freq))
+            print(f"Using PWM freq: {freq}")
             c = PCA9685(channel, address=address, busnum=busnum, frequency=freq)
             input_prompt = "Enter a PWM setting to test ('q' for quit) (0-1500): "
             print()
+
         while True:
             try:
                 val = input(input_prompt)
@@ -227,14 +257,14 @@ class CalibrateCar(BaseCommand):
                     break
                 pmw = int(val)
                 if args.arduino == True:
-                    arduino_controller.set_pulse(channel,pmw)
+                    arduino_controller.set_pulse(channel, pmw)
                 else:
                     c.run(pmw)
             except KeyboardInterrupt:
                 print("\nKeyboardInterrupt received, exit.")
                 break
             except Exception as ex:
-                print("Oops, {}".format(ex))
+                print(f"Oops, {ex}")
 
 
 class MakeMovieShell(BaseCommand):
@@ -248,7 +278,10 @@ class MakeMovieShell(BaseCommand):
     def parse_args(self, args):
         parser = argparse.ArgumentParser(prog='makemovie')
         parser.add_argument('--tub', help='The tub to make movie from')
-        parser.add_argument('--out', default='tub_movie.mp4', help='The movie filename to create. default: tub_movie.mp4')
+        parser.add_argument(
+            '--out',
+            default='tub_movie.mp4',
+            help='The movie filename to create. default: tub_movie.mp4')
         parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
         parser.add_argument('--model', default=None, help='the model to use to show control outputs')
         parser.add_argument('--type', default=None, required=False, help='the model type to load')
@@ -256,7 +289,10 @@ class MakeMovieShell(BaseCommand):
         parser.add_argument('--start', type=int, default=0, help='first frame to process')
         parser.add_argument('--end', type=int, default=-1, help='last frame to process')
         parser.add_argument('--scale', type=int, default=2, help='make image frame output larger by X mult')
-        parser.add_argument('--draw-user-input', default=True, action='store_false', help='show user input on the video')
+        parser.add_argument(
+            '--draw-user-input',
+            default=True, action='store_false',
+            help='show user input on the video')
         parsed_args = parser.parse_args(args)
         return parsed_args, parser
 
@@ -271,6 +307,60 @@ class MakeMovieShell(BaseCommand):
 
         mm = MakeMovie()
         mm.run(args, parser)
+
+
+class ShowHistogram(BaseCommand):
+
+    def parse_args(self, args):
+        parser = argparse.ArgumentParser(prog='tubhist',
+                                         usage='%(prog)s [options]')
+        parser.add_argument('--tub', nargs='+', help='paths to tubs')
+        parser.add_argument('--record', default=None,
+                            help='name of record to create histogram')
+        parser.add_argument('--out', default=None,
+                            help='path where to save histogram end with .png')
+        parsed_args = parser.parse_args(args)
+        return parsed_args
+
+    def show_histogram(self, tub_paths, record_name, out):
+        """
+        Produce a histogram of record type frequency in the given tub
+        """
+        import pandas as pd
+        from matplotlib import pyplot as plt
+        from robopilot.parts.tub_v2 import Tub
+
+        output = out or os.path.basename(tub_paths)
+        path_list = tub_paths.split(",")
+        records = [record for path in path_list for record
+                   in Tub(path, read_only=True)]
+        df = pd.DataFrame(records)
+        df.drop(columns=["_index", "_timestamp_ms"], inplace=True)
+        # this prints it to screen
+        if record_name is not None:
+            df[record_name].hist(bins=50)
+        else:
+            df.hist(bins=50)
+
+        try:
+            if out is not None:
+                filename = output
+            else:
+                if record_name is not None:
+                    filename = f"{output}_hist_{record_name.replace('/', '_')}.png"
+                else:
+                    filename = f"{output}_hist.png"
+            plt.savefig(filename)
+            logger.info(f'saving image to: {filename}')
+        except Exception as e:
+            logger.error(str(e))
+        plt.show()
+
+    def run(self, args):
+        args = self.parse_args(args)
+        if isinstance(args.tub, list):
+            args.tub = ','.join(args.tub)
+        self.show_histogram(args.tub, args.record, args.out)
 
 
 class ShowCnnActivations(BaseCommand):
@@ -295,7 +385,7 @@ class ShowCnnActivations(BaseCommand):
 
         conv_layer_names = self.get_conv_layers(model)
         input_layer = model.get_layer(name='img_in').input
-        activations = []      
+        activations = []
         for conv_layer_name in conv_layer_names:
             output_layer = model.get_layer(name=conv_layer_name).output
 
@@ -309,9 +399,9 @@ class ShowCnnActivations(BaseCommand):
 
         for i, layer in enumerate(activations):
             fig = self.plt.figure()
-            fig.suptitle('Layer {}'.format(i+1))
+            fig.suptitle(f'Layer {i+1}')
 
-            print('layer {} shape: {}'.format(i+1, layer.shape))
+            print(f'layer {i+1} shape: {layer.shape}')
             feature_maps = layer.shape[2]
             rows = math.ceil(feature_maps / cols)
 
@@ -319,7 +409,7 @@ class ShowCnnActivations(BaseCommand):
                 self.plt.subplot(rows, cols, j + 1)
 
                 self.plt.imshow(layer[:, :, j])
-        
+
         self.plt.show()
 
     def get_conv_layers(self, model):
@@ -334,7 +424,7 @@ class ShowCnnActivations(BaseCommand):
         parser.add_argument('--image', help='path to image')
         parser.add_argument('--model', default=None, help='path to model')
         parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
-        
+
         parsed_args = parser.parse_args(args)
         return parsed_args
 
@@ -347,13 +437,15 @@ class ShowCnnActivations(BaseCommand):
 
 class ShowPredictionPlots(BaseCommand):
 
-    def plot_predictions(self, cfg, tub_paths, model_path, limit, model_type):
+    def plot_predictions(self, cfg, tub_paths, model_path, limit, model_type,
+                         noshow, dark=False):
         """
         Plot model predictions for angle and throttle against data from tubs.
         """
         import matplotlib.pyplot as plt
         import pandas as pd
         from pathlib import Path
+        from robopilot.pipeline.types import TubDataset
 
         model_path = os.path.expanduser(model_path)
         model = dk.utils.get_model_by_type(model_type, cfg)
@@ -365,7 +457,7 @@ class ShowPredictionPlots(BaseCommand):
         user_angles = []
         user_throttles = []
         pilot_angles = []
-        pilot_throttles = []       
+        pilot_throttles = []
 
         base_path = Path(os.path.expanduser(tub_paths)).absolute().as_posix()
         dataset = TubDataset(config=cfg, tub_paths=[base_path],
@@ -373,25 +465,29 @@ class ShowPredictionPlots(BaseCommand):
         records = dataset.get_records()[:limit]
         bar = IncrementalBar('Inferencing', max=len(records))
 
+        output_names = list(model.output_shapes()[1].keys())
         for tub_record in records:
-            inputs = model.x_transform_and_process(
+            input_dict = model.x_transform(
                 tub_record, lambda x: normalize_image(x))
-            input_dict = model.x_translate(inputs)
             pilot_angle, pilot_throttle = \
                 model.inference_from_dict(input_dict)
-            user_angle, user_throttle = model.y_transform(tub_record)
+            user_angle = tub_record.underlying['user/angle']
+            user_throttle = tub_record.underlying['user/throttle']
             user_angles.append(user_angle)
             user_throttles.append(user_throttle)
             pilot_angles.append(pilot_angle)
             pilot_throttles.append(pilot_throttle)
             bar.next()
 
+        bar.finish()
         angles_df = pd.DataFrame({'user_angle': user_angles,
                                   'pilot_angle': pilot_angles})
         throttles_df = pd.DataFrame({'user_throttle': user_throttles,
                                      'pilot_throttle': pilot_throttles})
-
-        fig = plt.figure()
+        if dark:
+            plt.style.use('dark_background')
+        fig = plt.figure('Tub Plot')
+        fig.set_layout_engine('tight')
         title = f"Model Predictions\nTubs: {tub_paths}\nModel: {model_path}\n" \
                 f"Type: {model_type}"
         fig.suptitle(title)
@@ -402,8 +498,9 @@ class ShowPredictionPlots(BaseCommand):
         ax1.legend(loc=4)
         ax2.legend(loc=4)
         plt.savefig(model_path + '_pred.png')
-        logger.info(f'Saving model at {model_path}_pred.png')
-        plt.show()
+        logger.info(f'Saving tubplot at {model_path}_pred.png')
+        if not noshow:
+            plt.show()
 
     def parse_args(self, args):
         parser = argparse.ArgumentParser(prog='tubplot', usage='%(prog)s [options]')
@@ -411,7 +508,10 @@ class ShowPredictionPlots(BaseCommand):
         parser.add_argument('--model', default=None, help='model for predictions')
         parser.add_argument('--limit', type=int, default=1000, help='how many records to process')
         parser.add_argument('--type', default=None, help='model type')
+        parser.add_argument('--noshow', default=False, action="store_true",
+                            help='if plot is shown in window')
         parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
+
         parsed_args = parser.parse_args(args)
         return parsed_args
 
@@ -419,7 +519,8 @@ class ShowPredictionPlots(BaseCommand):
         args = self.parse_args(args)
         args.tub = ','.join(args.tub)
         cfg = load_config(args.config)
-        self.plot_predictions(cfg, args.tub, args.model, args.limit, args.type)
+        self.plot_predictions(cfg, args.tub, args.model, args.limit,
+                              args.type, args.noshow)
 
 
 class Train(BaseCommand):
@@ -432,6 +533,9 @@ class Train(BaseCommand):
         parser.add_argument('--model', default=None, help='output model name')
         parser.add_argument('--type', default=None, help='model type')
         parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
+        parser.add_argument('--myconfig', default='./myconfig.py',
+                            help='file name of myconfig file, defaults to '
+                                 'myconfig.py')
         parser.add_argument('--framework',
                             choices=['tensorflow', 'pytorch', None],
                             required=False,
@@ -448,7 +552,8 @@ class Train(BaseCommand):
     def run(self, args):
         args = self.parse_args(args)
         args.tub = ','.join(args.tub)
-        cfg = load_config(args.config)
+        my_cfg = args.myconfig
+        cfg = load_config(args.config, my_cfg)
         framework = args.framework if args.framework \
             else getattr(cfg, 'DEFAULT_AI_FRAMEWORK', 'tensorflow')
 
@@ -461,13 +566,35 @@ class Train(BaseCommand):
             train(cfg, args.tub, args.model, args.type,
                   checkpoint_path=args.checkpoint)
         else:
-            print(f"Unrecognized framework: {framework}. Please specify one of "
-                  f"'tensorflow' or 'pytorch'")
+            logger.error(f"Unrecognized framework: {framework}. Please specify "
+                         f"one of 'tensorflow' or 'pytorch'")
+
+
+class ModelDatabase(BaseCommand):
+
+    def parse_args(self, args):
+        parser = argparse.ArgumentParser(prog='models',
+                                         usage='%(prog)s [options]')
+        parser.add_argument('--config', default='./config.py', help=HELP_CONFIG)
+        parser.add_argument('--group', action="store_true",
+                            default=False,
+                            help='group tubs and plot separately')
+        parsed_args = parser.parse_args(args)
+        return parsed_args
+
+    def run(self, args):
+        from robopilot.pipeline.database import PilotDatabase
+        args = self.parse_args(args)
+        cfg = load_config(args.config)
+        p = PilotDatabase(cfg)
+        pilot_txt, tub_txt, _ = p.pretty_print(args.group)
+        print(pilot_txt)
+        print(tub_txt)
 
 
 class Gui(BaseCommand):
     def run(self, args):
-        from robopilot.management.kivy_ui import main
+        from robopilot.management.ui.ui import main
         main()
 
 
@@ -479,16 +606,17 @@ def execute_from_command_line():
         'createcar': CreateCar,
         'findcar': FindCar,
         'calibrate': CalibrateCar,
-        'tubclean': TubManager,
         'tubplot': ShowPredictionPlots,
+        'tubhist': ShowHistogram,
         'makemovie': MakeMovieShell,
         'createjs': CreateJoystick,
         'cnnactivations': ShowCnnActivations,
         'update': UpdateCar,
         'train': Train,
+        'models': ModelDatabase,
         'ui': Gui,
     }
-    
+
     args = sys.argv[:]
 
     if len(args) > 1 and args[1] in commands.keys():
@@ -499,6 +627,6 @@ def execute_from_command_line():
         dk.utils.eprint('Usage: The available commands are:')
         dk.utils.eprint(list(commands.keys()))
 
-    
+
 if __name__ == "__main__":
     execute_from_command_line()

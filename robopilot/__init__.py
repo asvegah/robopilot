@@ -1,19 +1,20 @@
+import os
 import sys
 from pyfiglet import Figlet
 import logging
-from pkg_resources import get_distribution
 
-__version__ = get_distribution('robopilot').version
+__version__ = '5.2.dev2'
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=os.environ.get('LOGLEVEL', 'INFO').upper())
+
 f = Figlet(font='speed')
 
 
-print(f.renderText('Robopilot'))
+print(f.renderText('Robopilot Car'))
 print(f'using robopilot v{__version__} ...')
 
-if sys.version_info.major < 3 or sys.version_info.minor < 6:
-    msg = f'Robopilot Requires Python 3.6 or greater. You are using {sys.version}'
+if sys.version_info.major < 3 or sys.version_info.minor < 11:
+    msg = f'Robopilot Requires Python 3.11 or greater. You are using {sys.version}'
     raise ValueError(msg)
 
 # The default recursion limits in CPython are too small.

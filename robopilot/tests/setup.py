@@ -7,7 +7,7 @@ from robopilot.management.base import CreateCar
 
 
 def on_pi():
-    if 'arm' in platform.machine():
+    if 'aarch64' in platform.machine():
         return True
     return False
 

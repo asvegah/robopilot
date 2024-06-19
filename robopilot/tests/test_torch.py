@@ -1,18 +1,16 @@
 import pytest
 import tarfile
 import os
-import numpy as np
-from collections import defaultdict, namedtuple
-
-import torch
-import pytorch_lightning as pl
-from robopilot.parts.pytorch.torch_train import train
-from robopilot.parts.pytorch.torch_data import TorchTubDataModule
-from robopilot.parts.pytorch.torch_utils import get_model_by_type
-
+import platform
+from collections import namedtuple
 from robopilot.config import Config
 
 Data = namedtuple('Data', ['type', 'name', 'convergence', 'pretrained'])
+
+
+is_jetson = pytest.mark.skipif(
+    platform.machine() == 'aarch64',
+    reason="pytorch not yet supported on jetson")
 
 
 @pytest.fixture
@@ -41,26 +39,7 @@ def car_dir(tmpdir_factory):
     # extract tub.tar.gz into temp car_dir/tub
     this_dir = os.path.dirname(os.path.abspath(__file__))
     with tarfile.open(os.path.join(this_dir, 'tub', 'tub.tar.gz')) as file:
-        def is_within_directory(directory, target):
-            
-            abs_directory = os.path.abspath(directory)
-            abs_target = os.path.abspath(target)
-        
-            prefix = os.path.commonprefix([abs_directory, abs_target])
-            
-            return prefix == abs_directory
-        
-        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-        
-            for member in tar.getmembers():
-                member_path = os.path.join(path, member.name)
-                if not is_within_directory(path, member_path):
-                    raise Exception("Attempted Path Traversal in Tar File")
-        
-            tar.extractall(path, members, numeric_owner=numeric_owner) 
-            
-        
-        safe_extract(file, dir)
+        file.extractall(dir)
     return dir
 
 
@@ -69,6 +48,7 @@ d1 = Data(type='resnet18', name='resnet18a', convergence=1.0, pretrained=None)
 test_data = [d1]
 
 
+@is_jetson
 @pytest.mark.skipif("GITHUB_ACTIONS" in os.environ,
                     reason='Suppress training test in CI')
 @pytest.mark.parametrize('data', test_data)
@@ -81,6 +61,8 @@ def test_train(config: Config, car_dir: str, data: Data) -> None:
     :param data:            test case data
     :return:                None
     """
+    from robopilot.parts.pytorch.torch_train import train
+
     def pilot_path(name):
         pilot_name = f'pilot_{name}.ckpt'
         return os.path.join(car_dir, 'models', pilot_name)
@@ -93,6 +75,7 @@ def test_train(config: Config, car_dir: str, data: Data) -> None:
     assert loss[-1] < loss[0] * data.convergence
 
 
+@is_jetson
 @pytest.mark.skipif("GITHUB_ACTIONS" in os.environ,
                     reason='Suppress training test in CI')
 @pytest.mark.parametrize('model_type', ['resnet18'])
@@ -107,6 +90,11 @@ def test_training_pipeline(config: Config, model_type: str, car_dir: str) \
     :param tub_dir:                 tub directory (car_dir/tub)
     :return:                        None
     """
+    import torch
+    import pytorch_lightning as pl
+    from robopilot.parts.pytorch.torch_data import TorchTubDataModule
+    from robopilot.parts.pytorch.torch_utils import get_model_by_type
+
     model = get_model_by_type(
         model_type, config, checkpoint_path=None)
 
@@ -121,8 +109,7 @@ def test_training_pipeline(config: Config, model_type: str, car_dir: str) \
         gpus = 0
 
     # Overfit the data
-    trainer = pl.Trainer(gpus=gpus, overfit_batches=2,
-                         progress_bar_refresh_rate=30, max_epochs=30)
+    trainer = pl.Trainer(accelerator='cpu', overfit_batches=2, max_epochs=30)
     trainer.fit(model, data_module)
     final_loss = model.loss_history[-1]
     assert final_loss < 0.35, \
@@ -133,11 +120,11 @@ def test_training_pipeline(config: Config, model_type: str, car_dir: str) \
         x, y = batch
         # In order to use a model pre-trained on ImageNet, the image
         # will be re-sized to 3x224x224 regardless of what the user chooses.
-        assert(x.shape == (config.BATCH_SIZE, 3, 224, 224))
-        assert(y.shape == (config.BATCH_SIZE, 2))
+        assert x.shape == (config.BATCH_SIZE, 3, 224, 224), "shape mismatch"
+        assert y.shape == (config.BATCH_SIZE, 2), "shape mismatch"
         break
 
     # Check inference
     val_x, val_y = next(iter(data_module.val_dataloader()))
     output = model(val_x)
-    assert(output.shape == (config.BATCH_SIZE, 2))
+    assert output.shape == (config.BATCH_SIZE, 2), "shape mismatch"

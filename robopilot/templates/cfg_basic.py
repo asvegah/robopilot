@@ -75,6 +75,7 @@ DEFAULT_AI_FRAMEWORK = 'tensorflow'  # The default AI framework to use. Choose f
 DEFAULT_MODEL_TYPE = 'linear' #(linear|categorical|rnn|imu|behavior|3d|localizer|latent)
 CREATE_TF_LITE = True  # automatically create tflite model in training
 CREATE_TENSOR_RT = False  # automatically create tensorrt model in training
+SAVE_MODEL_AS_H5 = False  # if old keras format should be used instead of savedmodel
 BATCH_SIZE = 128
 TRAIN_TEST_SPLIT = 0.8
 MAX_EPOCHS = 100
@@ -87,6 +88,7 @@ PRINT_MODEL_SUMMARY = True      #print layers and weights to stdout
 OPTIMIZER = None                #adam, sgd, rmsprop, etc.. None accepts default
 LEARNING_RATE = 0.001           #only used when OPTIMIZER specified
 LEARNING_RATE_DECAY = 0.0       #only used when OPTIMIZER specified
+CACHE_IMAGES = True             # if images are cached in training for speed up
 PRUNE_CNN = False
 PRUNE_PERCENT_TARGET = 75 # The desired percentage of pruning.
 PRUNE_PERCENT_PER_ITERATION = 20 # Percenge of pruning that is perform per iteration.
@@ -100,7 +102,7 @@ NUM_LAST_LAYERS_TO_TRAIN = 7
 #For the categorical model, this limits the upper bound of the learned throttle
 #it's very IMPORTANT that this value is matched from the training PC config.py and the robot.py
 #and ideally wouldn't change once set.
-MODEL_CATEGORICAL_MAX_THROTTLE_RANGE = 0.5
+MODEL_CATEGORICAL_MAX_THROTTLE_RANGE = 0.8
 
 #RNN or 3D
 SEQUENCE_LENGTH = 3
@@ -108,10 +110,10 @@ SEQUENCE_LENGTH = 3
 # Augmentations and Transformations
 AUGMENTATIONS = []
 TRANSFORMATIONS = []
-# Settings for brightness and blur, use 'MULTIPLY' and/or 'BLUR' in
+# Settings for brightness and blur, use 'BRIGHTNESS' and/or 'BLUR' in
 # AUGMENTATIONS
-AUG_MULTIPLY_RANGE = (0.5, 1.5)
-AUG_BLUR_RANGE = (0.0, 3.0)
+AUG_BRIGHTNESS_RANGE = 0.2  # this is interpreted as [-0.2, 0.2]
+AUG_BLUR_RANGE = (0, 3)
 # Number of pixels to crop, requires 'CROP' in TRANSFORMATIONS to be set
 ROI_CROP_TOP = 45
 ROI_CROP_BOTTOM = 0
@@ -156,19 +158,19 @@ WEB_INIT_MODE = "user"              # which control mode to start in. one of use
 AI_THROTTLE_MULT = 1.0              # this multiplier will scale every throttle value for all output from NN models
 
 
-#RobopilotGym
+#DonkeyGym
 #Only on Ubuntu linux, you can use the simulator as a virtual robopilot and
 #issue the same python manage.py drive command as usual, but have them control a virtual car.
 #This enables that, and sets the path to the simualator and the environment.
-#You will want to download the simulator binary from: https://github.com/tawnkramer/robopilot_gym/releases/download/v18.9/RobopilotSimLinux.zip
-#then extract that and modify ROBOPILOT_SIM_PATH.
-ROBOPILOT_GYM = False
-ROBOPILOT_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/RobopilotSimLinux/robopilot_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
-ROBOPILOT_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
+#You will want to download the simulator binary from: https://github.com/tawnkramer/donkey_gym/releases/download/v18.9/DonkeySimLinux.zip
+#then extract that and modify DONKEY_SIM_PATH.
+DONKEY_GYM = False
+DONKEY_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/DonkeySimLinux/donkey_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
+DONKEY_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
 GYM_CONF = { "body_style" : "robopilot", "body_rgb" : (128, 128, 128), "car_name" : "car", "font_size" : 100} # body style(robopilot|bare|car01) body rgb 0-255
 GYM_CONF["racer_name"] = "Your Name"
 GYM_CONF["country"] = "Place"
 GYM_CONF["bio"] = "I race robots."
 
-SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmyrobopilot.com"
+SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmydonkey.com"
 SIM_ARTIFICIAL_LATENCY = 0          # this is the millisecond latency in controls. Can use useful in emulating the delay when useing a remote server. values of 100 to 400 probably reasonable.

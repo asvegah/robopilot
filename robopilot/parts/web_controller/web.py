@@ -10,6 +10,7 @@ The client and web server needed to control a car remotely.
 
 import os
 import json
+import logging
 import time
 import asyncio
 
@@ -23,6 +24,8 @@ import tornado.websocket
 from socket import gethostname
 
 from ... import utils
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteWebServer():
@@ -38,6 +41,7 @@ class RemoteWebServer():
         self.angle = 0.
         self.throttle = 0.
         self.mode = 'user'
+        self.mode_latch = None
         self.recording = False
         # use one session for all requests
         self.session = requests.Session()
@@ -98,19 +102,22 @@ class RemoteWebServer():
 class LocalWebController(tornado.web.Application):
 
     def __init__(self, port=8887, mode='user'):
-        '''
+        """
         Create and publish variables needed on many of
         the web handlers.
-        '''
-
-        print('Starting Robopilot Server...', end='')
+        """
+        logger.info('Starting Robopilot Server...')
 
         this_dir = os.path.dirname(os.path.realpath(__file__))
         self.static_file_path = os.path.join(this_dir, 'templates', 'static')
         self.angle = 0.0
         self.throttle = 0.0
         self.mode = mode
+        self.mode_latch = None
         self.recording = False
+        self.recording_latch = None
+        self.buttons = {}  # latched button values for processing
+
         self.port = port
 
         self.num_records = 0
@@ -133,43 +140,81 @@ class LocalWebController(tornado.web.Application):
 
         settings = {'debug': True}
         super().__init__(handlers, **settings)
-        print("... you can now go to {}.local:{} to drive "
-              "your car.".format(gethostname(), port))
+        logger.info(f"You can now go to {gethostname()}.local:{port} to "
+                    f"drive your car.")
 
     def update(self):
-        ''' Start the tornado webserver. '''
+        """ Start the tornado webserver. """
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.listen(self.port)
         self.loop = IOLoop.instance()
         self.loop.start()
 
-    def update_wsclients(self):
-        for wsclient in self.wsclients:
-            try:
-                data = {
-                    'num_records': self.num_records
-                }
-                data_str = json.dumps(data)
-                wsclient.write_message(data_str)
-            except Exception as e:
-                print(e)
-                pass
+    def update_wsclients(self, data):
+        if data:
+            for wsclient in self.wsclients:
+                try:
+                    data_str = json.dumps(data)
+                    logger.debug(f"Updating web client: {data_str}")
+                    wsclient.write_message(data_str)
+                except Exception as e:
+                    logger.warning("Error writing websocket message",
+                                   exc_info=e)
+                    pass
 
-    def run_threaded(self, img_arr=None, num_records=0):
+    def run_threaded(self, img_arr=None, num_records=0, mode=None, recording=None):
+        """
+        :param img_arr: current camera image or None
+        :param num_records: current number of data records
+        :param mode: default user/mode
+        :param recording: default recording mode
+        """
         self.img_arr = img_arr
         self.num_records = num_records
+
+        #
+        # enforce defaults if they are not none.
+        #
+        changes = {}
+        if mode is not None and self.mode != mode:
+            self.mode = mode
+            changes["driveMode"] = self.mode
+        if self.mode_latch is not None:
+            self.mode = self.mode_latch
+            self.mode_latch = None
+            changes["driveMode"] = self.mode
+        if recording is not None and self.recording != recording:
+            self.recording = recording
+            changes["recording"] = self.recording
+        if self.recording_latch is not None:
+            self.recording = self.recording_latch;
+            self.recording_latch = None;
+            changes["recording"] = self.recording;
 
         # Send record count to websocket clients
         if (self.num_records is not None and self.recording is True):
             if self.num_records % 10 == 0:
-                if self.loop is not None:
-                    self.loop.add_callback(self.update_wsclients)
+                changes['num_records'] = self.num_records
 
-        return self.angle, self.throttle, self.mode, self.recording
+        #
+        # get latched button presses then clear button presses
+        # Next iteration will clear press in memory
+        #
+        buttons = self.buttons
+        self.buttons = {}
+        for button, pressed in buttons.items():
+            if pressed:
+                self.buttons[button] = False
 
-    def run(self, img_arr=None):
-        self.img_arr = img_arr
-        return self.angle, self.throttle, self.mode, self.recording
+        # if there were changes, then send to web client
+        if changes and self.loop is not None:
+            logger.debug(str(changes))
+            self.loop.add_callback(lambda: self.update_wsclients(changes))
+
+        return self.angle, self.throttle, self.mode, self.recording, buttons
+
+    def run(self, img_arr=None, num_records=0, mode=None, recording=None):
+        return self.run_threaded(img_arr, num_records, mode, recording)
 
     def shutdown(self):
         pass
@@ -187,10 +232,17 @@ class DriveAPI(RequestHandler):
         and throttle of the vehicle on a the index webpage
         '''
         data = tornado.escape.json_decode(self.request.body)
-        self.application.angle = data['angle']
-        self.application.throttle = data['throttle']
-        self.application.mode = data['drive_mode']
-        self.application.recording = data['recording']
+
+        if data.get('angle') is not None:
+            self.application.angle = data['angle']
+        if data.get('throttle') is not None:
+            self.application.throttle = data['throttle']
+        if data.get('drive_mode') is not None:
+            self.application.mode = data['drive_mode']
+        if data.get('recording') is not None:
+            self.application.recording = data['recording']
+        if data.get('buttons') is not None:
+            latch_buttons(self.application.buttons, data['buttons'])
 
 
 class WsTest(RequestHandler):
@@ -205,24 +257,47 @@ class CalibrateHandler(RequestHandler):
         await self.render("templates/calibrate.html")
 
 
+def latch_buttons(buttons, pushes):
+    """
+    Latch button pushes
+    buttons: the latched values
+    pushes: the update value
+    """
+    if pushes is not None:
+        #
+        # we got button pushes.
+        # - we latch the pushed buttons so we can process the push
+        # - after it is processed we clear it
+        #
+        for button in pushes:
+            # if pushed, then latch it
+            if pushes[button]:
+                buttons[button] = True
+
+
 class WebSocketDriveAPI(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
         return True
 
     def open(self):
-        print("New client connected")
+        logger.info("New client connected")
         self.application.wsclients.append(self)
 
     def on_message(self, message):
         data = json.loads(message)
-
-        self.application.angle = data['angle']
-        self.application.throttle = data['throttle']
-        self.application.mode = data['drive_mode']
-        self.application.recording = data['recording']
+        self.application.angle = data.get('angle', self.application.angle)
+        self.application.throttle = data.get('throttle', self.application.throttle)
+        if data.get('drive_mode') is not None:
+            self.application.mode = data['drive_mode']
+            self.application.mode_latch = self.application.mode
+        if data.get('recording') is not None:
+            self.application.recording = data['recording']
+            self.application.recording_latch = self.application.recording
+        if data.get('buttons') is not None:
+            latch_buttons(self.application.buttons, data['buttons'])
 
     def on_close(self):
-        # print("Client disconnected")
+        logger.info("Client disconnected")
         self.application.wsclients.remove(self)
 
 
@@ -231,10 +306,10 @@ class WebSocketCalibrateAPI(tornado.websocket.WebSocketHandler):
         return True
 
     def open(self):
-        print("New client connected")
+        logger.info("New client connected")
 
     def on_message(self, message):
-        print(f"wsCalibrate {message}")
+        logger.info(f"wsCalibrate {message}")
         data = json.loads(message)
         if 'throttle' in data:
             print(data['throttle'])
@@ -246,7 +321,8 @@ class WebSocketCalibrateAPI(tornado.websocket.WebSocketHandler):
 
         if 'config' in data:
             config = data['config']
-            if self.application.drive_train_type == "I2C_SERVO":
+            if self.application.drive_train_type == "PWM_STEERING_THROTTLE" \
+                or self.application.drive_train_type == "I2C_SERVO":
                 if 'STEERING_LEFT_PWM' in config:
                     self.application.drive_train['steering'].left_pulse = config['STEERING_LEFT_PWM']
 
@@ -271,7 +347,7 @@ class WebSocketCalibrateAPI(tornado.websocket.WebSocketHandler):
                     self.application.drive_train.MAX_REVERSE = config['MM1_MAX_REVERSE']
 
     def on_close(self):
-        print("Client disconnected")
+        logger.info("Client disconnected")
 
 
 class VideoAPI(RequestHandler):
@@ -280,6 +356,9 @@ class VideoAPI(RequestHandler):
     '''
 
     async def get(self):
+        placeholder_image = utils.load_image_sized(
+                        os.path.join(self.application.static_file_path,
+                                     "img_placeholder.jpg"), 160, 120, 3)
 
         self.set_header("Content-type",
                         "multipart/x-mixed-replace;boundary=--boundarydonotcross")
@@ -288,11 +367,17 @@ class VideoAPI(RequestHandler):
         my_boundary = "--boundarydonotcross\n"
         while True:
 
-            interval = .01
-            if served_image_timestamp + interval < time.time() and \
-                    hasattr(self.application, 'img_arr'):
+            interval = .005
+            if served_image_timestamp + interval < time.time():
+                #
+                # if we have an image, then use it.
+                # otherwise show placeholder
+                #
+                if hasattr(self.application, 'img_arr') and self.application.img_arr is not None:
+                    img = utils.arr_to_binary(self.application.img_arr)
+                else:
+                    img = utils.arr_to_binary(placeholder_image)
 
-                img = utils.arr_to_binary(self.application.img_arr)
                 self.write(my_boundary)
                 self.write("Content-type: image/jpeg\r\n")
                 self.write("Content-length: %s\r\n\r\n" % len(img))
@@ -336,9 +421,10 @@ class WebFpv(Application):
         ]
 
         settings = {'debug': True}
+        self.img_arr = None
         super().__init__(handlers, **settings)
-        print("Started Web FPV server. You can now go to {}.local:{} to "
-              "view the car camera".format(gethostname(), self.port))
+        logger.info(f"Started Web FPV server. You can now go to "
+                    f"{gethostname()}.local:{self.port} to view the car camera")
 
     def update(self):
         """ Start the tornado webserver. """
