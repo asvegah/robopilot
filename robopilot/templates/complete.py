@@ -59,9 +59,9 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
     requesting the same named input.
     """
     logger.info(f'PID: {os.getpid()}')
-    if cfg.DONKEY_GYM:
+    if cfg.ROBOPILOT_GYM:
         #the simulator will use cuda and then we usually run out of resources
-        #if we also try to use cuda. so disable for donkey_gym.
+        #if we also try to use cuda. so disable for robopilot_gym.
         os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
     if model_type is None:
@@ -201,7 +201,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
                 return 0.1
             return 0
 
-    if cfg.HAVE_RGB_LED and not cfg.DONKEY_GYM:
+    if cfg.HAVE_RGB_LED and not cfg.ROBOPILOT_GYM:
         from robopilot.parts.led_status import RGB_LED
         led = RGB_LED(cfg.LED_PIN_R, cfg.LED_PIN_G, cfg.LED_PIN_B, cfg.LED_INVERT)
         led.set_rgb(cfg.LED_R, cfg.LED_G, cfg.LED_B)
@@ -507,7 +507,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
            'float', 'float', 'float']
 
     # rbx
-    if cfg.DONKEY_GYM:
+    if cfg.ROBOPILOT_GYM:
         if cfg.SIM_RECORD_LOCATION:
             inputs += ['pos/pos_x', 'pos/pos_y', 'pos/pos_z', 'pos/speed', 'pos/cte']
             types  += ['float', 'float', 'float', 'float', 'float']
@@ -557,7 +557,7 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
         V.add(pub, inputs=['jpg/bin'])
 
 
-    if cfg.DONKEY_GYM:
+    if cfg.ROBOPILOT_GYM:
         print("You can now go to http://localhost:%d to drive your car." % cfg.WEB_CONTROL_PORT)
     else:
         print("You can now go to <your hostname.local>:%d to drive your car." % cfg.WEB_CONTROL_PORT)
@@ -759,10 +759,10 @@ def add_user_controller(V, cfg, use_joystick, input_image='ui/image_array'):
 def add_simulator(V, cfg):
     # Robopilot gym part will output position information if it is configured
     # TODO: the simulation outputs conflict with imu, odometry, kinematics pose estimation and T265 outputs; make them work together.
-    if cfg.DONKEY_GYM:
-        from robopilot.parts.dgym import DonkeyGymEnv
+    if cfg.ROBOPILOT_GYM:
+        from robopilot.parts.dgym import RobopilotGymEnv
         # rbx
-        gym = DonkeyGymEnv(cfg.DONKEY_SIM_PATH, host=cfg.SIM_HOST, env_name=cfg.DONKEY_GYM_ENV_NAME, conf=cfg.GYM_CONF,
+        gym = RobopilotGymEnv(cfg.ROBOPILOT_SIM_PATH, host=cfg.SIM_HOST, env_name=cfg.ROBOPILOT_GYM_ENV_NAME, conf=cfg.GYM_CONF,
                            record_location=cfg.SIM_RECORD_LOCATION, record_gyroaccel=cfg.SIM_RECORD_GYROACCEL,
                            record_velocity=cfg.SIM_RECORD_VELOCITY, record_lidar=cfg.SIM_RECORD_LIDAR,
                         #    record_distance=cfg.SIM_RECORD_DISTANCE, record_orientation=cfg.SIM_RECORD_ORIENTATION,
@@ -792,7 +792,7 @@ def get_camera(cfg):
     Get the configured camera part
     """
     cam = None
-    if not cfg.DONKEY_GYM:
+    if not cfg.ROBOPILOT_GYM:
         if cfg.CAMERA_TYPE == "PICAM":
             from robopilot.parts.camera import PiCamera
             cam = PiCamera(image_w=cfg.IMAGE_W, image_h=cfg.IMAGE_H, image_d=cfg.IMAGE_DEPTH,
@@ -873,6 +873,14 @@ def add_camera(V, cfg, camera_type):
                        'imu/acl_x', 'imu/acl_y', 'imu/acl_z',
                        'imu/gyr_x', 'imu/gyr_y', 'imu/gyr_z'],
               threaded=True)
+    elif cfg.CAMERA_TYPE == "MSKINECT":
+        from robopilot.parts.kinectv2 import MSKinectV2
+        cam = MSKinectV2(
+            enable_rgb=cfg.MSKINECT_V2_RGB,
+            enable_depth=cfg.MSKINECT_V2_DEPTH,
+            enable_ir=cfg.MSKINECT_V2_IR)
+     
+        V.add(cam, inputs=[], outputs=['cam/image_array'], threaded=True)
     else:
         inputs = []
         outputs = ['cam/image_array']
@@ -926,7 +934,7 @@ def add_imu(V, cfg):
 #
 def add_drivetrain(V, cfg):
 
-    if (not cfg.DONKEY_GYM) and cfg.DRIVE_TRAIN_TYPE != "MOCK":
+    if (not cfg.ROBOPILOT_GYM) and cfg.DRIVE_TRAIN_TYPE != "MOCK":
         from robopilot.parts import actuator, pins
         from robopilot.parts.actuator import TwoWheelSteeringThrottle
 

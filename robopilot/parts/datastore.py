@@ -28,7 +28,7 @@ class Tub(object):
     For example:
 
     #Create a tub to store speed values.
-    >>> path = '~/mydonkey/test_tub'
+    >>> path = '~/myrobopilot/test_tub'
     >>> inputs = ['user/speed', 'cam/image']
     >>> types = ['float', 'image']
     >>> t=Tub(path=path, inputs=inputs, types=types)

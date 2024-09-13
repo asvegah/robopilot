@@ -665,7 +665,7 @@ class XboxOneJoystick(Joystick):
       - the result should print 'Y'.  If not, make sure the above steps have been done corretly.
 
     credit:
-    https://github.com/Ezward/donkeypart_ps3_controller/blob/master/donkeypart_ps3_controller/part.py
+    https://github.com/Ezward/robopilotpart_ps3_controller/blob/master/robopilotpart_ps3_controller/part.py
     '''
     def __init__(self, *args, **kwargs):
         super(XboxOneJoystick, self).__init__(*args, **kwargs)
@@ -698,7 +698,7 @@ class LogitechJoystick(Joystick):
     Tested with Logitech Gamepad F710
     https://www.amazon.com/Logitech-940-000117-Gamepad-F710/dp/B0041RR0TW
     credit:
-    https://github.com/kevkruemp/donkeypart_logitech_controller/blob/master/donkeypart_logitech_controller/part.py
+    https://github.com/kevkruemp/robopilotpart_logitech_controller/blob/master/robopilotpart_logitech_controller/part.py
     '''
     def __init__(self, *args, **kwargs):
         super(LogitechJoystick, self).__init__(*args, **kwargs)
@@ -766,7 +766,7 @@ class WiiU(Joystick):
     #An interface to a physical joystick available at /dev/input/js0
     #contains mappings may work for the WiiUPro joystick
     #This was taken from
-    #https://github.com/autorope/donkeypart_bluetooth_game_controller/blob/master/donkeypart_bluetooth_game_controller/wiiu_config.yml
+    #https://github.com/autorope/robopilotpart_bluetooth_game_controller/blob/master/robopilotpart_bluetooth_game_controller/wiiu_config.yml
     #and need testing!
     def __init__(self, *args, **kwargs):
         super(WiiU, self).__init__(*args, **kwargs)
@@ -1356,7 +1356,7 @@ class XboxOneJoystickController(JoystickController):
     '''
     A Controller object that maps inputs to actions
     credit:
-    https://github.com/Ezward/donkeypart_ps3_controller/blob/master/donkeypart_ps3_controller/part.py
+    https://github.com/Ezward/robopilotpart_ps3_controller/blob/master/robopilotpart_ps3_controller/part.py
     '''
     def __init__(self, *args, **kwargs):
         super(XboxOneJoystickController, self).__init__(*args, **kwargs)
@@ -1440,7 +1440,7 @@ class LogitechJoystickController(JoystickController):
     '''
     A Controller object that maps inputs to actions
     credit:
-    https://github.com/kevkruemp/donkeypart_logitech_controller/blob/master/donkeypart_logitech_controller/part.py
+    https://github.com/kevkruemp/robopilotpart_logitech_controller/blob/master/robopilotpart_logitech_controller/part.py
     '''
     def __init__(self, *args, **kwargs):
         super(LogitechJoystickController, self).__init__(*args, **kwargs)

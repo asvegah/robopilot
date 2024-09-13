@@ -64,10 +64,10 @@ def drive(cfg, model_path=None, model_type=None):
     car = dk.vehicle.Vehicle()
     # add camera
     inputs = []
-    if cfg.DONKEY_GYM:
-        from robopilot.parts.dgym import DonkeyGymEnv 
-        cam = DonkeyGymEnv(cfg.DONKEY_SIM_PATH, host=cfg.SIM_HOST,
-                           env_name=cfg.DONKEY_GYM_ENV_NAME, conf=cfg.GYM_CONF,
+    if cfg.ROBOPILOT_GYM:
+        from robopilot.parts.dgym import RobopilotGymEnv 
+        cam = RobopilotGymEnv(cfg.ROBOPILOT_SIM_PATH, host=cfg.SIM_HOST,
+                           env_name=cfg.ROBOPILOT_GYM_ENV_NAME, conf=cfg.GYM_CONF,
                            delay=cfg.SIM_ARTIFICIAL_LATENCY)
         inputs = ['angle', 'throttle', 'brake']
     elif cfg.CAMERA_TYPE == "PICAM":
@@ -165,7 +165,7 @@ def drive(cfg, model_path=None, model_type=None):
             outputs=['angle', 'throttle'])
 
     # Drive train setup
-    if cfg.DONKEY_GYM or cfg.DRIVE_TRAIN_TYPE == "MOCK":
+    if cfg.ROBOPILOT_GYM or cfg.DRIVE_TRAIN_TYPE == "MOCK":
         pass
     else:
         steering_controller = PCA9685(cfg.STEERING_CHANNEL,
@@ -213,15 +213,15 @@ def calibrate(cfg):
     third channel on the remote we can use it for wiping bad data while
     recording, so we print its values here, too.
     """
-    donkey_car = dk.vehicle.Vehicle()
+    robopilot_car = dk.vehicle.Vehicle()
 
     # create the RC receiver
     rc_steering = RCReceiver(cfg.STEERING_RC_GPIO, invert=True)
     rc_throttle = RCReceiver(cfg.THROTTLE_RC_GPIO)
     rc_wiper = RCReceiver(cfg.DATA_WIPER_RC_GPIO, jitter=0.05, no_action=0)
-    donkey_car.add(rc_steering, outputs=['user/angle', 'user/steering_on'])
-    donkey_car.add(rc_throttle, outputs=['user/throttle', 'user/throttle_on'])
-    donkey_car.add(rc_wiper, outputs=['user/wiper', 'user/wiper_on'])
+    robopilot_car.add(rc_steering, outputs=['user/angle', 'user/steering_on'])
+    robopilot_car.add(rc_throttle, outputs=['user/throttle', 'user/throttle_on'])
+    robopilot_car.add(rc_wiper, outputs=['user/wiper', 'user/wiper_on'])
 
     # create plotter part for printing into the shell
     class Plotter:
@@ -231,11 +231,11 @@ def calibrate(cfg):
                   (angle, steering_on, throttle, throttle_on, wiper, wiper_on))
 
     # add plotter part
-    donkey_car.add(Plotter(), inputs=['user/angle', 'user/steering_on',
+    robopilot_car.add(Plotter(), inputs=['user/angle', 'user/steering_on',
                                       'user/throttle', 'user/throttle_on',
                                       'user/wiper', 'user/wiper_on'])
     # run the vehicle at 5Hz to keep network traffic down
-    donkey_car.start(rate_hz=10, max_loop_count=cfg.MAX_LOOPS)
+    robopilot_car.start(rate_hz=10, max_loop_count=cfg.MAX_LOOPS)
 
 
 if __name__ == '__main__':

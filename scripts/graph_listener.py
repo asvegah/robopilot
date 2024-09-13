@@ -24,7 +24,7 @@ def condition_values(obj):
     The first value is time (x), and the rest are y values
     from -2, +2
     This will work with the network publisher test:
-    python ~/projects/donkey_tkramer/robopilot/parts/network.py
+    python ~/projects/robopilot_tkramer/robopilot/parts/network.py
     '''
 
     vals = obj[1:]

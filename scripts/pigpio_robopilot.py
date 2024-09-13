@@ -1,5 +1,5 @@
 '''
-# pigpio_donkey.py
+# pigpio_robopilot.py
 # author: Tawn Kramer
 # date: 3/11/2018
 #

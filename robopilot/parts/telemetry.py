@@ -37,9 +37,9 @@ class MqttTelemetry(StreamHandler):
         self._step_inputs = cfg.TELEMETRY_DEFAULT_INPUTS.split(',')
         self._step_types = cfg.TELEMETRY_DEFAULT_TYPES.split(',')
         self._total_updates = 0
-        self._donkey_name = os.environ.get('DONKEY_NAME', cfg.TELEMETRY_DONKEY_NAME)
-        self._mqtt_broker = os.environ.get('DONKEY_MQTT_BROKER', cfg.TELEMETRY_MQTT_BROKER_HOST)  # 'iot.eclipse.org'
-        self._topic = cfg.TELEMETRY_MQTT_TOPIC_TEMPLATE % self._donkey_name
+        self._robopilot_name = os.environ.get('ROBOPILOT_NAME', cfg.TELEMETRY_ROBOPILOT_NAME)
+        self._mqtt_broker = os.environ.get('ROBOPILOT_MQTT_BROKER', cfg.TELEMETRY_MQTT_BROKER_HOST)  # 'iot.eclipse.org'
+        self._topic = cfg.TELEMETRY_MQTT_TOPIC_TEMPLATE % self._robopilot_name
         self._use_json_format = cfg.TELEMETRY_MQTT_JSON_ENABLE
         self._mqtt_client = MQTTClient(callback_api_version=CallbackAPIVersion.VERSION2)
         self._mqtt_client.connect(self._mqtt_broker, cfg.TELEMETRY_MQTT_BROKER_PORT)

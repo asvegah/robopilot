@@ -206,7 +206,7 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     #
     # log pose
     #
-    # if cfg.DONKEY_GYM:
+    # if cfg.ROBOPILOT_GYM:
     #     lpos = LoggerPart(inputs=['dist/left', 'dist/right', 'dist', 'pos/pos_x', 'pos/pos_y', 'yaw'], level="INFO", logger="simulator")
     #     V.add(lpos, inputs=lpos.inputs)
     # if cfg.HAVE_ODOM:

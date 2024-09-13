@@ -23,7 +23,28 @@ Robopilot is minimalist and modular autonomous computer vision library for Pytho
 * Xbox Kinect for PC (x2)
 * Intel RTF Drone (x1)
 
-### Get Piloting
+## Building robopilot
+
+### Create car template
+
+```
+robopilot createcar --path ~/mycar
+```
+
+### Upgrade car software
+```
+cd projects/robopilot
+git pull
+robopilot createcar --path ~/mycar --overwrite
+```
+
+### Start your car
+```
+cd ~/mycar
+python manage.py drive
+```
+
+### Get piloting
 
 After building a Robopilot you can turn on your device and go to http://localhost:8887 to pilot.
 

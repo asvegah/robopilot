@@ -612,8 +612,8 @@ class TestVehicle(unittest.TestCase):
             pass
 
         cfg = Config()
-        # cfg.DONKEY_GYM = True
-        # cfg.__setattr__('DONKEY_GYM', True)
+        # cfg.ROBOPILOT_GYM = True
+        # cfg.__setattr__('ROBOPILOT_GYM', True)
         # cfg.SIM_RECORD_DISTANCE = True
 
         cfg.DRIVE_LOOP_HZ = 50

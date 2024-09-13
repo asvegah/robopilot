@@ -481,7 +481,7 @@ LOGGING_FORMAT = '%(message)s'  # (Python logging format - https://docs.python.o
 # MQTT TELEMETRY
 #
 HAVE_MQTT_TELEMETRY = False
-TELEMETRY_DONKEY_NAME = 'my_robot1234'
+TELEMETRY_ROBOPILOT_NAME = 'my_robot1234'
 TELEMETRY_MQTT_TOPIC_TEMPLATE = 'robopilot/%s/telemetry'
 TELEMETRY_MQTT_JSON_ENABLE = False
 TELEMETRY_MQTT_BROKER_HOST = 'broker.hivemq.com'
@@ -545,22 +545,22 @@ MODEL_RELOADED_LED_B = 0
 
 
 #
-# DonkeyGym
+# RobopilotGym
 #
 # Only on Ubuntu linux, you can use the simulator as a virtual robopilot and
 # issue the same python manage.py drive command as usual, but have them control a virtual car.
 # This enables that, and sets the path to the simualator and the environment.
-# You will want to download the simulator binary from: https://github.com/tawnkramer/donkey_gym/releases/download/v18.9/DonkeySimLinux.zip
-# then extract that and modify DONKEY_SIM_PATH.
-DONKEY_GYM = False
-DONKEY_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/DonkeySimLinux/donkey_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
-DONKEY_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
+# You will want to download the simulator binary from: https://github.com/tawnkramer/robopilot_gym/releases/download/v18.9/RobopilotSimLinux.zip
+# then extract that and modify ROBOPILOT_SIM_PATH.
+ROBOPILOT_GYM = False
+ROBOPILOT_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/RobopilotSimLinux/robopilot_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
+ROBOPILOT_GYM_ENV_NAME = "robopilot-generated-track-v0" # ("robopilot-generated-track-v0"|"robopilot-generated-roads-v0"|"robopilot-warehouse-v0"|"robopilot-avc-sparkfun-v0")
 GYM_CONF = { "body_style" : "robopilot", "body_rgb" : (128, 128, 128), "car_name" : "car", "font_size" : 100} # body style(robopilot|bare|car01) body rgb 0-255
 GYM_CONF["racer_name"] = "Your Name"
 GYM_CONF["country"] = "Place"
 GYM_CONF["bio"] = "I race robots."
 
-SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmydonkey.com"
+SIM_HOST = "127.0.0.1"              # when racing on virtual-race-league use host "trainmyrobopilot.com"
 SIM_ARTIFICIAL_LATENCY = 0          # this is the millisecond latency in controls. Can use useful in emulating the delay when useing a remote server. values of 100 to 400 probably reasonable.
 
 # Save info from Simulator (pln)
@@ -636,7 +636,7 @@ GPS_DEBUG = False  # set to True to log UTM position (beware; lots of logging!)
 #
 # PATH FOLLOWING
 #
-PATH_FILENAME = "donkey_path.csv"   # the path will be saved to this filename as comma separated x,y values
+PATH_FILENAME = "robopilot_path.csv"   # the path will be saved to this filename as comma separated x,y values
 PATH_DEBUG = True                   # True to log x,y position
 PATH_SCALE = 10.0                   # the path display will be scaled by this factor in the web page
 PATH_OFFSET = (255, 255)            # 255, 255 is the center of the map. This offset controls where the origin is displayed.

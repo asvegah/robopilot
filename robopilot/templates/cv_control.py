@@ -202,7 +202,7 @@ def drive(cfg, use_joystick=False, camera_type='single', meta=[]):
     tub_writer = TubWriter(tub_path, inputs=inputs, types=types, metadata=meta)
     V.add(tub_writer, inputs=inputs, outputs=["tub/num_records"], run_condition='recording')
 
-    if cfg.DONKEY_GYM:
+    if cfg.ROBOPILOT_GYM:
         print("You can now go to http://localhost:%d to drive your car." % cfg.WEB_CONTROL_PORT)
     else:
         print("You can now go to <your hostname.local>:%d to drive your car." % cfg.WEB_CONTROL_PORT)

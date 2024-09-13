@@ -37,7 +37,7 @@ class RcFileHandler:
         FieldProperty('pilot/throttle', '', centered=False),
     ]
 
-    def __init__(self, file_path='~/.donkeyrc'):
+    def __init__(self, file_path='~/.robopilotrc'):
         self.file_path = os.path.expanduser(file_path)
         self.data = self.create_data()
         recursive_update(self.data, self.read_file())
@@ -73,16 +73,16 @@ class RcFileHandler:
         if os.path.exists(self.file_path):
             with open(self.file_path) as f:
                 data = yaml.load(f, Loader=yaml.FullLoader)
-                Logger.info(f'Donkeyrc: Robopilot file {self.file_path} loaded.')
+                Logger.info(f'Robopilotrc: Robopilot file {self.file_path} loaded.')
                 return data
         else:
-            Logger.warn(f'Donkeyrc: Robopilot file {self.file_path} does not '
+            Logger.warn(f'Robopilotrc: Robopilot file {self.file_path} does not '
                         f'exist.')
             return {}
 
     def write_file(self):
         if os.path.exists(self.file_path):
-            Logger.info(f'Donkeyrc: Robopilot file {self.file_path} updated.')
+            Logger.info(f'Robopilotrc: Robopilot file {self.file_path} updated.')
         with open(self.file_path, mode='w') as f:
             self.data['time_stamp'] = datetime.now()
             data = yaml.dump(self.data, f)

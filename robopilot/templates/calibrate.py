@@ -52,7 +52,7 @@ def drive(cfg ):
     drive_train = None
 
     #Drive train setup
-    if cfg.DONKEY_GYM or cfg.DRIVE_TRAIN_TYPE == "MOCK":
+    if cfg.ROBOPILOT_GYM or cfg.DRIVE_TRAIN_TYPE == "MOCK":
         pass
 
     elif cfg.DRIVE_TRAIN_TYPE == "PWM_STEERING_THROTTLE":

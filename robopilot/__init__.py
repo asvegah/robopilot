@@ -13,9 +13,10 @@ f = Figlet(font='speed')
 print(f.renderText('Robopilot Car'))
 print(f'using robopilot v{__version__} ...')
 
-if sys.version_info.major < 3 or sys.version_info.minor < 11:
-    msg = f'Robopilot Requires Python 3.11 or greater. You are using {sys.version}'
-    raise ValueError(msg)
+#TODO when we upgrade
+# if sys.version_info.major < 3 or sys.version_info.minor < 11:
+#     msg = f'Robopilot Requires Python 3.11 or greater. You are using {sys.version}'
+#     raise ValueError(msg)
 
 # The default recursion limits in CPython are too small.
 sys.setrecursionlimit(10**5)

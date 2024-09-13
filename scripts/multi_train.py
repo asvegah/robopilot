@@ -23,9 +23,9 @@ for i in range(num_clients):
 	with open(conf_file, "wt") as outfile:
 		outfile.write('WEB_CONTROL_PORT = 888%d\n' % i)
 		outfile.write('WEB_INIT_MODE = "local"\n')
-		outfile.write('DONKEY_GYM = True\n')
-		outfile.write('DONKEY_GYM_ENV_NAME = "robopilot-generated-track-v0"\n')
-		outfile.write('DONKEY_SIM_PATH = "remote"\n')
+		outfile.write('ROBOPILOT_GYM = True\n')
+		outfile.write('ROBOPILOT_GYM_ENV_NAME = "robopilot-generated-track-v0"\n')
+		outfile.write('ROBOPILOT_SIM_PATH = "remote"\n')
 		outfile.write('SIM_HOST = "%s"\n' % host)
 		iStyle = random.randint(0, len(body_styles) - 1)
 		body_style = body_styles[iStyle]

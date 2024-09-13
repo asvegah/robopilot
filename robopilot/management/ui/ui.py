@@ -34,7 +34,7 @@ class StartScreen(AppScreen):
     pass
 
 
-class DonkeyApp(App):
+class RobopilotApp(App):
     title = 'Robopilot Car'
 
     def initialise(self, event):
@@ -61,7 +61,7 @@ class DonkeyApp(App):
 
 
 def main():
-    DonkeyApp().run()
+    RobopilotApp().run()
 
 
 if __name__ == '__main__':

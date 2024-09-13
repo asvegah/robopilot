@@ -12,6 +12,7 @@ Notes: Robopilot part for the Microsoft Kinect v2 depth camera.
 #os.environ["export LD_LIBRARY_PATH"] = "/home/jetson-1/freenect2/lib"
 #os.environ["export DISPLAY"] = ":0"
 
+import time
 import sys
 import os
 import json
@@ -204,8 +205,8 @@ class Kinect():
                     whether or not to run kinect in headless mode.
         '''
         if headless:
-            from pylibfreenect2 import OpenCLPacketPipeline
-            pipeline = OpenCLPacketPipeline()
+            from pylibfreenect2 import CudaPacketPipeline
+            pipeline = CudaPacketPipeline()
         else:
             from pylibfreenect2 import OpenGLPacketPipeline
             pipeline = OpenGLPacketPipeline()
@@ -356,7 +357,7 @@ class Kinect():
         if (colorized):
             # Format the color registration map - To become the "color" input for the scatterplot's setData() function.
             colors = np.divide(registered, 255) # values must be between 0.0 - 1.0
-            colors = colors.reshape(colors.shape[0] * colors.shape[1], 4) # From: Rows X Cols X RGB -to- [[r,g,b],[r,g,b]...]
+            colors = colors.reshape(colors.shape[0] * colors.shape[1], 3) # From: Rows X Cols X RGB -to- [[r,g,b],[r,g,b]...]
             colors = colors[:, :3:]  # remove alpha (fourth index) from BGRA to BGR
             colors = colors[...,::-1] #BGR to RGB
             return ptcld, colors
@@ -511,8 +512,8 @@ class Kinect():
 # If the part is initialized with different sizes, then opencv
 # will be used to resize the image before it is returned.
 #
-WIDTH = 424
-HEIGHT = 240
+WIDTH = 1920
+HEIGHT = 1080
 CHANNELS = 3
 
 class MSKinectV2(object):
@@ -525,144 +526,77 @@ class MSKinectV2(object):
           the the outputs will be scaled to the requested size on the way out.
     """
 
-    def __init__(self, width = WIDTH, height = HEIGHT, channels = CHANNELS, enable_rgb=True, enable_depth=True, device_id = None):
-        self.device_id = fn.getDeviceSerialNumber(0)  # "923322071108" # serial number of device to use or None to use default
-        self.enable_rgb = enable_rgb
-        self.enable_depth = enable_depth
-
-        self.width = width
-        self.height = height
-        self.channels = channels
-        self.resize = (width != WIDTH) or (height != height) or (channels != CHANNELS)
-        if self.resize:
-            print("The output images will be resized from {} to {}.  This requires opencv.".format((WIDTH, HEIGHT, CHANNELS), (self.width, self.height, self.channels)))
-
-        # Configure streams
-        self.pipeline = None
-        self.config = fn.openDevice(self.device_id, pipeline=pipeline) 
+    def __init__(self, width = WIDTH, height = HEIGHT, enable_rgb=True, enable_depth=True, enable_ir=True, device_index=0):
         
-        listener = SyncMultiFrameListener(
-            FrameType.Color | FrameType.Ir | FrameType.Depth)
-        
-        # Register listeners
-        self.config.setColorFrameListener(listener)
-        self.config.setIrAndDepthFrameListener(listener)
-
-        if self.enable_depth or self.enable_rgb:             
-            
-            # Start streaming
-            if self.enable_rgb and self.enable_depth:
-                self.config.start()
-            else:
-                config.startStreams(rgb=self.enable_rgb, depth=self.enable_depth)
-
-            # NOTE: must be called after device.start()
-            if self.enable_depth:
-                self.registration = Registration(self.config.getIrCameraParams(),
-                                            self.config.getColorCameraParams())
-
-            self.undistorted = Frame(512, 424, 4)
-            self.registered = Frame(512, 424, 4)
-            self.color_depth_map = np.zeros((424, 512),  np.int32).ravel()                                 
-
-            # eat some frames to allow auto-exposure to settle
-            #for i in range(0, 5):
-                #self.pipeline.wait_for_frames()
-                #listener.waitForNewFrame()
-                #listener.release(frames)  
-            
-            self.pipeline = listener 
-            print('Kinect Camera loaded.. .warming camera')
-            time.sleep(2)   # let camera warm up
-
-              
-
-        # initialize frame state
+        # initialize state
+        self.point_cloud = None
         self.color_image = None
         self.depth_image = None
-        self.frame_count = 0
-        self.start_time = time.time()
-        self.frame_time = self.start_time
-
+        self.ir_image = None
         self.running = True
-
-    def _stop_pipeline(self):
-        if self.pipeline is not None:
-            self.config.stop()
-            self.config.close()  
-            self.pipeline = None
-
-    def _poll(self):
-        import cv2
-
-        last_time = self.frame_time
-        self.frame_time = time.time() - self.start_time
-        self.frame_count += 1
-
-        #
-        # get the frames
-        #
-        try:
-            if self.enable_rgb or self.enable_depth:
-                frames = self.pipeline.waitForNewFrame()        
-        except Exception as e:
-            logging.error(e)
-            return
-
-        #
-        # convert camera frames to images
-        #
-        if self.enable_rgb or self.enable_depth:
-            # Align the depth frame to color frame
-            depth_frame = frames["depth"]
-            color_frame = frames["color"]
-            self.registration.apply(color_frame, depth_frame, self.undistorted, self.registered, color_depth_map=self.color_depth_map)
-            # Convert depth to 8bit array, RGB into 8bit planar array
-            self.depth_image = depth_frame.asarray(np.uint8)
-            flipped_frame = cv2.flip(color_frame.asarray(np.uint8), 1)
-            self.color_image = cv2.cvtColor(flipped_frame, cv2.COLOR_RGBA2RGB)
-            #self.color_image = self.color_depth_map.reshape(424, 512)
-            #self.depth_image = np.asanyarray(depth_frame.get_data(), dtype=np.uint16) if self.enable_depth else None
-            #self.color_image = np.asanyarray(color_frame.get_data(), dtype=np.uint8) if self.enable_rgb else None
-
-            if self.resize:
-                import cv2
-                if self.width != WIDTH or self.height != HEIGHT:
-                    self.color_image = cv2.resize(self.color_image, (self.width, self.height), cv2.INTER_NEAREST) if self.enable_rgb else None
-                    self.depth_image = cv2.resize(self.depth_image, (self.width, self.height), cv2.INTER_NEAREST) if self.enable_depth else None
-                if self.channels != CHANNELS:
-                    self.color_image = cv2.cvtColor(self.color_image, cv2.COLOR_RGB2GRAY) if self.enable_rgb else None
-
-        self.pipeline.release(frames) 
-
+        self.enable_rgb = enable_rgb
+        self.enable_depth = enable_depth
+        self.enable_ir = enable_ir
+        self.device_index = device_index
+        self.width = width
+        self.height = height
+        
+    def init_camera(self):
+        # initialize the camera and stream
+        self.camera = Kinect(device_index = self.device_index, headless=True)
+        self.poll_camera()
+        print('Kinect Camera loaded.. .warming camera')
+        time.sleep(2)
+        
     def update(self):
         """
         When running threaded, update() is called from the background thread
         to update the state.  run_threaded() is called to return the latest state.
-        """
+        """   
+        self.init_camera()
         while self.running:
-            self._poll()
+            self.poll_camera()
 
-    def run_threaded(self):
-        """
-        Return the lastest state read by update().  This will not block.
-        All 4 states are returned, but may be None if the feature is not enabled when the camera part is constructed.
-        For gyroscope, x is pitch, y is yaw and z is roll.
-        :return: (rbg_image: nparray, depth_image: nparray, acceleration: (x:float, y:float, z:float), gyroscope: (x:float, y:float, z:float))
-        """
-        return self.color_image, self.depth_image
+    def poll_camera(self):    
+        # self.frame = self.camera.get_ptcld()
+        # self.frame = self.camera.get_ptcld(colorized=True)
+
+        color_frame, depth_frame, ir_frame = self.camera.get_frame([COLOR, DEPTH, IR])
+        
+        # Convert depth and ir to 16bit array, RGB into 8bit planar array
+        self.depth_image = np.asanyarray(depth_frame, dtype=np.uint16) if self.enable_depth else None
+        # self.color_image = np.asanyarray(color_frame, dtype=np.uint8) if self.enable_rgb else None
+        self.color_image = color_frame if self.enable_rgb else None
+        self.ir_image =  np.asanyarray(ir_frame, dtype=np.uint16) if self.enable_ir else None
+        self.point_cloud = self.camera.get_ptcld(colorized=True) # np.asanyarray(self.camera.get_ptcld(), dtype=np.uint16) if self.enable_ir else None
 
     def run(self):
         """
         Read and return frame from camera.  This will block while reading the frame.
         see run_threaded() for return types.
         """
-        self._poll()
-        return self.run_threaded()
+        self.poll_camera()
 
+    def run_threaded(self):
+        """
+        Return the lastest state read by update().  This will not block.
+        All 4 states are returned, but may be None if the feature is not enabled when the camera part is constructed.
+        For gyroscope, x is pitch, y is yaw and z is roll.
+        :return: (rbg_image: nparray, depth_image: nparray, depth_image: nparray)
+        """
+        return self.color_image
+    
+    def _stop_pipeline(self):
+        if self.pipeline is not None:
+            self.config.stop()
+            self.config.close()  
+            self.pipeline = None
+        
     def shutdown(self):
         self.running = False
-        time.sleep(2) # give thread enough time to shutdown
-
+                 
         # done running
         self._stop_pipeline()
+        print('stopping Kinect Camera')
+        time.sleep(.5)
+        del(self.camera) 

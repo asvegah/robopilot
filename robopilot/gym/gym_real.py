@@ -11,10 +11,10 @@ import gym
 import numpy as np
 from gym import error, spaces, utils
 
-from .remote_controller import DonkeyRemoteContoller
+from .remote_controller import RobopilotRemoteContoller
 
 
-class DonkeyRealEnv(gym.Env):
+class RobopilotRealEnv(gym.Env):
     """
     OpenAI Gym Environment for a real Robopilot
     """
@@ -32,22 +32,22 @@ class DonkeyRealEnv(gym.Env):
 
     def __init__(self, time_step=0.05, frame_skip=2):
 
-        print("starting DonkeyGym env")
+        print("starting RobopilotGym env")
         
         try:
-            donkey_name = str(os.environ['DONKEY_NAME'])
+            robopilot_name = str(os.environ['ROBOPILOT_NAME'])
         except:
-            donkey_name = 'my_robot1234'
-            print("No DONKEY_NAME environment var. Using default:", donkey_name)
+            robopilot_name = 'my_robot1234'
+            print("No ROBOPILOT_NAME environment var. Using default:", robopilot_name)
 
         try:
-            mqtt_broker = str(os.environ['DONKEY_MQTT_BROKER'])
+            mqtt_broker = str(os.environ['ROBOPILOT_MQTT_BROKER'])
         except:
             mqtt_broker = "iot.eclipse.org"
-            print("No DONKEY_MQTT_BROKER environment var. Using default:", mqtt_broker)
+            print("No ROBOPILOT_MQTT_BROKER environment var. Using default:", mqtt_broker)
             
         # start controller
-        self.controller = DonkeyRemoteContoller(donkey_name=donkey_name, mqtt_broker=mqtt_broker)
+        self.controller = RobopilotRemoteContoller(robopilot_name=robopilot_name, mqtt_broker=mqtt_broker)
         
         # steering and throttle
         self.action_space = spaces.Box(low=np.array([self.STEER_LIMIT_LEFT, self.THROTTLE_MIN]),
